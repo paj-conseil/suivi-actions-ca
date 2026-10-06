@@ -105,8 +105,7 @@ function SectionBlock({ r, i, docs, notes, actions }: { r: Reunion; i: Instance;
   const { me, go, toast, bump } = useApp();
   return (
     <section className="reunion-section">
-      <div className="reunion-section-head">
-        <InstanceBadge i={i} />
+      <div className={`reunion-section-head head-${i}`}>
         <h3>{instanceLabel(i)}</h3>
       </div>
 
@@ -156,7 +155,7 @@ function SectionBlock({ r, i, docs, notes, actions }: { r: Reunion; i: Instance;
 }
 
 export function ReunionDetail({ id }: { id: string }) {
-  const { me, go, back, route, toast, bump, instances, dataVersion } = useApp();
+  const { me, go, back, toast, bump, instances, dataVersion } = useApp();
   const q = useQuery(async () => {
     const { data, error } = await supabase.from("reunions").select("*").eq("id", id).maybeSingle();
     if (error) throw error;
@@ -173,7 +172,6 @@ export function ReunionDetail({ id }: { id: string }) {
   if (!q.data) return (<><Topbar title="Réunion" backTo /><main className="content"><ErrorBox msg={q.error} /><Empty>Réunion introuvable ou non accessible.</Empty></main></>);
   const { r, docs, actions, sections } = q.data;
   const visible = ORDER.filter((i) => instances.includes(i));
-  const tab = (visible.includes(route.s as Instance) ? route.s : visible[0]) as Instance;
 
   return (
     <>
@@ -186,23 +184,12 @@ export function ReunionDetail({ id }: { id: string }) {
           <h2>{r.titre}</h2>
         </div>
 
-        {visible.length > 1 && (
-          <div className="segmented" role="tablist" aria-label="Section" style={{ position: "sticky", top: 64, zIndex: 5 }}>
-            {visible.map((i) => (
-              <button key={i} role="tab" aria-selected={tab === i} className={tab === i ? "on" : ""}
-                onClick={() => go({ v: "reunion", id: r.id, s: i }, true)}>
-                {i === "bureau" ? "Conseil scolaire" : "Conseil d'administration"}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {tab && (
-          <SectionBlock key={tab} r={r} i={tab}
-            docs={docs.filter((d) => d.instance === tab)}
-            notes={sections.find((s) => s.instance === tab)?.notes ?? null}
-            actions={actions.filter((a) => a.instance === tab)} />
-        )}
+        {visible.map((i) => (
+          <SectionBlock key={i} r={r} i={i}
+            docs={docs.filter((d) => d.instance === i)}
+            notes={sections.find((x) => x.instance === i)?.notes ?? null}
+            actions={actions.filter((a) => a.instance === i)} />
+        ))}
 
         {me.is_admin && (
           <div style={{ marginTop: 28 }}>

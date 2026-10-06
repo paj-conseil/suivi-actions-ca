@@ -421,3 +421,7 @@ h1, h2, h3, .hello, .brand h1, .detail-head h2, .group-head .name { font-family:
 .badge.tag-primaire { color: var(--green); }
 .badge.tag-college { color: var(--red); }
 @media (prefers-color-scheme: dark) { .badge.tag-primaire { color: var(--primary); } .badge.tag-college { color: var(--rose); } }
+.reunion-section + .reunion-section { margin-top: 30px; padding-top: 22px; border-top: 2px solid var(--line); }
+.reunion-section-head h3 { font-size: 20px; }
+.reunion-section-head { border-left: 5px solid var(--green); padding-left: 10px; }
+.reunion-section-head.head-bureau { border-left-color: var(--red); }
