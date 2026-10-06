@@ -3,6 +3,7 @@ import { supabase, fullName, assocNiveau } from "../lib";
 import { useApp } from "../store";
 import { Avatar, Topbar } from "../components/ui";
 import { ChangePassword } from "./Auth";
+import { InstallCard } from "../components/InstallCard";
 import { IChevron, IUsers } from "../components/Icons";
 
 export function ProfilePage() {
@@ -20,6 +21,9 @@ export function ProfilePage() {
             <div className="small muted" style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{me.email}</div>
           </div>
         </div>
+
+        <div className="section-title">Application sur votre téléphone</div>
+        <InstallCard />
 
         <div className="section-title">Mes accès</div>
         <div className="card row wrap" style={{ gap: 6 }}>
@@ -50,13 +54,6 @@ export function ProfilePage() {
           ) : (
             <button className="btn block" onClick={() => setChanging(true)}>Changer mon mot de passe</button>
           )}
-        </div>
-
-        <div className="section-title">Sur votre téléphone</div>
-        <div className="card small">
-          Ajoutez l'application à votre écran d'accueil pour l'ouvrir comme une application.
-          <br />Sur iPhone : bouton Partager puis « Sur l'écran d'accueil ».
-          <br />Sur Android : menu ⋮ puis « Ajouter à l'écran d'accueil ».
         </div>
 
         <button className="btn block" style={{ marginTop: 24 }} onClick={() => supabase.auth.signOut()}>Se déconnecter</button>

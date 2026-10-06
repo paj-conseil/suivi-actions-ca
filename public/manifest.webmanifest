@@ -1,9 +1,9 @@
 {
-  "name": "Suivi actions CA",
-  "short_name": "Actions CA",
+  "name": "CA GSCA",
+  "short_name": "CA GSCA",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#F4F3EE",
+  "background_color": "#FFFFFF",
   "theme_color": "#163C3A",
   "lang": "fr",
   "icons": [
@@ -23,5 +23,9 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ]
+  ],
+  "id": "./",
+  "scope": "./",
+  "description": "Suivi des réunions et des actions du conseil scolaire et du conseil d'administration du Groupe Scolaire Carlo Acutis",
+  "orientation": "portrait"
 }
