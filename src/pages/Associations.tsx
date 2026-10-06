@@ -33,7 +33,7 @@ export function DocCard({ d, assoc }: { d: AdminDoc; assoc?: string }) {
       <div className="title">{d.titre}</div>
       <div className="meta">
         <EtatBadge d={d} />
-        {assoc && <span className="badge">{assoc}</span>}
+        {assoc && <span className={`badge tag-assoc ${assoc === "Collège" ? "tag-college" : "tag-primaire"}`}>{assoc}</span>}
         <span className="row" style={{ gap: 4 }}><IClock width={15} height={15} />{validiteText(d)}</span>
         {d.date_signature && <span>Signé le {fmtDate(d.date_signature)}</span>}
         {resp && <span className="row" style={{ gap: 6 }}><Avatar p={resp} sm />{fullName(resp)}</span>}
@@ -69,10 +69,12 @@ export function AssociationsPage() {
   }, [dataVersion]);
 
   const assocs = q.data?.assocs ?? [];
-  const current = assocs.find((x) => x.code === route.a) ?? assocs[0];
+  // Sans association choisie : vue globale des deux associations
+  const current = route.a ? assocs.find((x) => x.code === route.a) : undefined;
+  const shortName = (id: string) => assocs.find((x) => x.id === id)?.code === "college" ? "Collège" : "Primaire";
   const f = route.f || "actifs";
   const filter = FILTERS.find((x) => x.v === f) ?? FILTERS[0];
-  const ofAssoc = (q.data?.docs ?? []).filter((d) => d.association_id === current?.id
+  const ofAssoc = (q.data?.docs ?? []).filter((d) => (!current || d.association_id === current.id)
     && (!search || `${d.titre} ${d.categorie} ${d.notes ?? ""}`.toLowerCase().includes(search.toLowerCase())));
   const list = sortDocs(ofAssoc.filter(filter.test));
 
@@ -105,24 +107,25 @@ export function AssociationsPage() {
       <Topbar title="Associations" />
       <main className="content">
         <ErrorBox msg={q.error} />
-        {q.loading && !q.data ? <Spinner /> : !current ? <Empty>Aucune association.</Empty> : (
+        {q.loading && !q.data ? <Spinner /> : assocs.length === 0 ? <Empty>Aucune association.</Empty> : (
           <>
             <div className="segmented" role="group" aria-label="Association">
+              <button className={!current ? "on" : ""} onClick={() => go({ v: "associations", f }, true)}>Vue globale</button>
               {assocs.map((a) => (
-                <button key={a.id} className={a.id === current.id ? "on" : ""} onClick={() => go({ v: "associations", a: a.code, f }, true)}>
+                <button key={a.id} className={a.id === current?.id ? "on" : ""} onClick={() => go({ v: "associations", a: a.code, f }, true)}>
                   {a.code === "primaire" ? "Primaire" : "Collège"}
                 </button>
               ))}
             </div>
 
             <div className="row" style={{ margin: "14px 2px 4px" }}>
-              <h2 style={{ fontSize: 19, margin: 0, flex: 1, color: "var(--primary)" }}>{current.nom}</h2>
-              {me.is_admin && <button className="icon-btn" aria-label="Renommer l'association" onClick={() => setRenaming(current)}><IEdit /></button>}
+              <h2 style={{ fontSize: 19, margin: 0, flex: 1, color: "var(--primary)" }}>{current ? current.nom : "Les deux associations"}</h2>
+              {me.is_admin && current && <button className="icon-btn" aria-label="Renommer l'association" onClick={() => setRenaming(current)}><IEdit /></button>}
             </div>
 
             <div className="kpis" style={{ marginTop: 8 }}>
               {(["expire", "a_renouveler", "a_renseigner", "valide"] as EtatDoc[]).map((e) => (
-                <button key={e} className={`kpi ${ETAT_CLASS[e]}`} onClick={() => go({ v: "associations", a: current.code, f: e }, true)}>
+                <button key={e} className={`kpi ${ETAT_CLASS[e]}`} onClick={() => go({ v: "associations", a: current?.code, f: e }, true)}>
                   <span className="n">{e === "valide" ? count("valide") + count("permanent") : count(e)}</span>
                   <span className="l">{e === "valide" ? "Valides" : ETAT_LABEL[e]}</span>
                 </button>
@@ -133,7 +136,7 @@ export function AssociationsPage() {
               <input className="search" type="search" placeholder="Rechercher un document" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Rechercher" />
               <div className="chips" role="group" aria-label="Filtre">
                 {FILTERS.map((x) => (
-                  <button key={x.v} className={`chip ${f === x.v ? "on" : ""}`} onClick={() => go({ v: "associations", a: current.code, f: x.v }, true)}>
+                  <button key={x.v} className={`chip ${f === x.v ? "on" : ""}`} onClick={() => go({ v: "associations", a: current?.code, f: x.v }, true)}>
                     {x.label}<span className="count">{ofAssoc.filter(x.test).length}</span>
                   </button>
                 ))}
@@ -143,27 +146,27 @@ export function AssociationsPage() {
             {list.length === 0 ? (
               <div className="card" style={{ marginTop: 12 }}>
                 <Empty icon={<IFile />}>
-                  {active.length === 0 ? "Aucun document enregistré pour cette association." : "Aucun document pour ce filtre."}
+                  {active.length === 0 ? `Aucun document enregistré${current ? " pour cette association" : ""}.` : "Aucun document pour ce filtre."}
                 </Empty>
-                {active.length === 0 && canAssocModifier(me) && (
+                {active.length === 0 && current && canAssocModifier(me) && (
                   <button className="btn block" onClick={() => setAdding(true)}>Partir d'une liste type</button>
                 )}
               </div>
             ) : byCat.map(([cat, docs]) => (
               <section key={cat}>
                 <div className="section-title">{cat}</div>
-                <div className="stack">{docs.map((d) => <DocCard key={d.id} d={d} />)}</div>
+                <div className="stack">{docs.map((d) => <DocCard key={d.id} d={d} assoc={current ? undefined : shortName(d.association_id)} />)}</div>
               </section>
             ))}
 
-            {active.length > 0 && canAssocModifier(me) && (
+            {active.length > 0 && current && canAssocModifier(me) && (
               <button className="btn ghost block" style={{ marginTop: 18 }} onClick={() => setAdding(true)}>Compléter avec la liste type</button>
             )}
           </>
         )}
       </main>
-      {current && canAssocModifier(me) && (
-        <button className="fab" onClick={() => go({ v: "doc-form", assoc: current.id })}><IPlus />Document</button>
+      {assocs.length > 0 && canAssocModifier(me) && (
+        <button className="fab" onClick={() => go({ v: "doc-form", assoc: current?.id })}><IPlus />Document</button>
       )}
 
       {adding && current && (

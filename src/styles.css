@@ -415,3 +415,9 @@ h1, h2, h3, .hello, .brand h1, .detail-head h2, .group-head .name { font-family:
 .check-group .cg-title { font-weight: 600; display: flex; flex-direction: column; }
 .check-group .cg-title .d { font-size: 13px; color: var(--muted); font-weight: 400; }
 .check input:disabled { opacity: .6; }
+
+/* Étiquette d'association dans la vue globale */
+.badge.tag-assoc { border: 1.5px solid currentColor; background: transparent; }
+.badge.tag-primaire { color: var(--green); }
+.badge.tag-college { color: var(--red); }
+@media (prefers-color-scheme: dark) { .badge.tag-primaire { color: var(--primary); } .badge.tag-college { color: var(--rose); } }
