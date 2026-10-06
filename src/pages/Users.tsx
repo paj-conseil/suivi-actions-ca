@@ -7,10 +7,11 @@ import { IKey, IPlus } from "../components/Icons";
 function Roles({ p }: { p: Profile }) {
   return (
     <span className="row wrap" style={{ gap: 4 }}>
-      {p.is_admin && <span className="badge role">Administrateur</span>}
-      {p.is_bureau && <span className="badge instance-bureau">Bureau</span>}
+      {p.is_admin && <span className="badge role">Admin</span>}
+      {p.is_bureau && <span className="badge instance-bureau">Conseil scolaire</span>}
       {p.is_ca && <span className="badge instance-ca">CA</span>}
-      {!p.is_admin && !p.is_bureau && !p.is_ca && <span className="badge">Aucun accès</span>}
+      {p.is_associations && <span className="badge role">Associations</span>}
+      {!p.is_admin && !p.is_bureau && !p.is_ca && !p.is_associations && <span className="badge">Aucun accès</span>}
       {!p.actif && <span className="badge s-retard">Désactivé</span>}
       {p.actif && p.must_change_password && <span className="badge s-proche">1re connexion à faire</span>}
     </span>
@@ -26,7 +27,7 @@ export function UsersPage() {
 
   return (
     <>
-      <Topbar title="Membres" />
+      <Topbar title="Membres" backTo />
       <main className="content">
         <p className="muted small" style={{ marginTop: 0 }}>
           {people.length} compte{people.length > 1 ? "s" : ""}.
@@ -47,9 +48,10 @@ export function UsersPage() {
         <div className="card small" style={{ marginTop: 20 }}>
           <strong>Niveaux d'accès</strong>
           <ul style={{ margin: "8px 0 0", paddingLeft: 18 }}>
-            <li><strong>Administrateur</strong> : voit et modifie tout, gère les membres.</li>
-            <li><strong>Bureau</strong> : consulte les réunions et actions du bureau.</li>
-            <li><strong>CA</strong> : consulte les réunions et actions du conseil.</li>
+            <li><strong>Admin</strong> : voit et modifie tout, gère les membres.</li>
+            <li><strong>Conseil scolaire</strong> : consulte la section Conseil scolaire des réunions et ses actions.</li>
+            <li><strong>Conseil d'administration</strong> : consulte la section CA des réunions et ses actions.</li>
+            <li><strong>Associations</strong> : consulte et met à jour les documents administratifs des deux associations.</li>
           </ul>
           <p className="muted tiny" style={{ marginBottom: 0 }}>Chaque responsable peut mettre à jour le statut et l'avancement de ses propres actions.</p>
         </div>
@@ -76,6 +78,7 @@ function UserSheet({ user, onClose, onSaved, onCreds }: {
   const [isAdmin, setIsAdmin] = useState(user?.is_admin ?? false);
   const [isBureau, setIsBureau] = useState(user?.is_bureau ?? false);
   const [isCa, setIsCa] = useState(user?.is_ca ?? true);
+  const [isAssoc, setIsAssoc] = useState(user?.is_associations ?? false);
   const [actif, setActif] = useState(user?.actif ?? true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,7 +90,7 @@ function UserSheet({ user, onClose, onSaved, onCreds }: {
     try {
       if (!user) {
         const res = await adminUsers<{ id: string; password: string }>({
-          action: "create", prenom, nom, email, is_admin: isAdmin, is_bureau: isBureau, is_ca: isCa,
+          action: "create", prenom, nom, email, is_admin: isAdmin, is_bureau: isBureau, is_ca: isCa, is_associations: isAssoc,
         });
         await refreshPeople();
         onCreds({ prenom, email: email.trim().toLowerCase(), password: res.password, reset: false });
@@ -95,7 +98,7 @@ function UserSheet({ user, onClose, onSaved, onCreds }: {
         await adminUsers({
           action: "update", id: user.id, prenom, nom,
           email: email.trim().toLowerCase() !== user.email ? email : undefined,
-          is_admin: isAdmin, is_bureau: isBureau, is_ca: isCa, actif,
+          is_admin: isAdmin, is_bureau: isBureau, is_ca: isCa, is_associations: isAssoc, actif,
         });
         if (self) await refreshMe();
         toast("Membre mis à jour");
@@ -125,11 +128,13 @@ function UserSheet({ user, onClose, onSaved, onCreds }: {
         <div className="field"><span>Accès</span>
           <div className="stack">
             <label className="check"><input type="checkbox" checked={isAdmin} disabled={self} onChange={(e) => setIsAdmin(e.target.checked)} />
-              <span><span className="t">Administrateur</span><br /><span className="d">Voit et modifie tout, gère les membres</span></span></label>
+              <span><span className="t">Admin</span><br /><span className="d">Voit et modifie tout, gère les membres</span></span></label>
             <label className="check"><input type="checkbox" checked={isBureau} onChange={(e) => setIsBureau(e.target.checked)} />
-              <span><span className="t">Bureau</span><br /><span className="d">Réunions et actions du bureau</span></span></label>
+              <span><span className="t">Conseil scolaire</span><br /><span className="d">Section Conseil scolaire des réunions et ses actions</span></span></label>
             <label className="check"><input type="checkbox" checked={isCa} onChange={(e) => setIsCa(e.target.checked)} />
-              <span><span className="t">Conseil d'administration</span><br /><span className="d">Réunions et actions du conseil</span></span></label>
+              <span><span className="t">Conseil d'administration</span><br /><span className="d">Section CA des réunions et ses actions</span></span></label>
+            <label className="check"><input type="checkbox" checked={isAssoc} onChange={(e) => setIsAssoc(e.target.checked)} />
+              <span><span className="t">Associations</span><br /><span className="d">Documents administratifs du Primaire et du Collège</span></span></label>
             {user && !self && (
               <label className="check"><input type="checkbox" checked={actif} onChange={(e) => setActif(e.target.checked)} />
                 <span><span className="t">Compte actif</span><br /><span className="d">Décocher bloque la connexion sans supprimer l'historique</span></span></label>

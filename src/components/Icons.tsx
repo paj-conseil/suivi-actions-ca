@@ -22,3 +22,4 @@ export const IChevron = (p: P) => (<svg {...base} {...p}><path d="m9 6 6 6-6 6" 
 export const ICheck = (p: P) => (<svg {...base} strokeWidth={2.6} {...p}><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>);
 export const IMail = (p: P) => (<svg {...base} {...p}><rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="m4 7 8 6 8-6" /></svg>);
 export const IKey = (p: P) => (<svg {...base} {...p}><circle cx="8" cy="15" r="4" /><path d="m11 12 9-9M17 6l3 3M14.5 8.5l2 2" /></svg>);
+export const IBuilding = (p: P) => (<svg {...base} {...p}><path d="M3 21h18M5 21V10l7-5 7 5v11" /><path d="M9 21v-5h6v5M9 11h.01M15 11h.01" /></svg>);

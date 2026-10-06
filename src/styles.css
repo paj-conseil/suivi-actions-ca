@@ -403,3 +403,10 @@ h1, h2, h3, .hello, .brand h1, .detail-head h2, .group-head .name { font-family:
 .dropzone .dz-hint { font-size: 13px; color: var(--muted); }
 .only-touch { display: none; }
 @media (hover: none) and (pointer: coarse) { .only-touch { display: inline; } .only-desktop { display: none; } }
+
+/* Sections d'une réunion */
+.reunion-section { margin-top: 14px; }
+.reunion-section-head { display: flex; align-items: center; gap: 10px; margin: 6px 2px 0; }
+.reunion-section-head h3 { margin: 0; font-size: 18px; color: var(--primary); }
+.form-section { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 14px; margin: 0; display: flex; flex-direction: column; gap: 14px; }
+.form-section legend { padding: 0 6px; font-family: var(--f-title); font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; }

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import {
-  supabase, type Action, type Doc, type Instance, type Reunion, errMsg, fmtDate, fmtSize, instanceLabel, todayISO,
+  supabase, type Action, type Doc, type Instance, type Reunion, type ReunionSection,
+  errMsg, fmtDate, fmtSize, instanceLabel, todayISO,
 } from "../lib";
 import { useApp, useQuery } from "../store";
 import { ActionCard, ConfirmButton, DropZone, Empty, ErrorBox, InstanceBadge, Spinner, Topbar } from "../components/ui";
@@ -8,23 +9,26 @@ import { ICalendar, IChevron, IEdit, IFile, IPlus, ITrash } from "../components/
 import { sortActions } from "./Dashboard";
 
 const BUCKET = "comptes-rendus";
+const ORDER: Instance[] = ["bureau", "ca"];
 
 export function ReunionsList() {
-  const { me, route, go, instances, dataVersion } = useApp();
-  const inst = (route.i as Instance | undefined) ?? (instances.length === 1 ? instances[0] : "");
+  const { me, go, instances, dataVersion } = useApp();
   const q = useQuery(async () => {
     const [r, d, a] = await Promise.all([
       supabase.from("reunions").select("*").order("date_reunion", { ascending: false }),
-      supabase.from("documents").select("reunion_id"),
-      supabase.from("actions").select("reunion_id"),
+      supabase.from("documents").select("reunion_id, instance"),
+      supabase.from("actions").select("reunion_id, instance"),
     ]);
     if (r.error) throw r.error;
-    const nDocs = new Map<string, number>(); (d.data ?? []).forEach((x: { reunion_id: string }) => nDocs.set(x.reunion_id, (nDocs.get(x.reunion_id) ?? 0) + 1));
-    const nAct = new Map<string, number>(); (a.data ?? []).forEach((x: { reunion_id: string | null }) => { if (x.reunion_id) nAct.set(x.reunion_id, (nAct.get(x.reunion_id) ?? 0) + 1); });
-    return { reunions: r.data as Reunion[], nDocs, nAct };
+    const key = (id: string, i: string) => `${id}:${i}`;
+    const nDocs = new Map<string, number>();
+    (d.data ?? []).forEach((x: { reunion_id: string; instance: string }) => nDocs.set(key(x.reunion_id, x.instance), (nDocs.get(key(x.reunion_id, x.instance)) ?? 0) + 1));
+    const nAct = new Map<string, number>();
+    (a.data ?? []).forEach((x: { reunion_id: string | null; instance: string }) => { if (x.reunion_id) nAct.set(key(x.reunion_id, x.instance), (nAct.get(key(x.reunion_id, x.instance)) ?? 0) + 1); });
+    return { reunions: r.data as Reunion[], nDocs, nAct, key };
   }, [dataVersion]);
 
-  const list = (q.data?.reunions ?? []).filter((r) => !inst || r.instance === inst);
+  const list = q.data?.reunions ?? [];
   const byYear = new Map<string, Reunion[]>();
   list.forEach((r) => { const y = r.date_reunion.slice(0, 4); byYear.set(y, [...(byYear.get(y) ?? []), r]); });
 
@@ -32,13 +36,6 @@ export function ReunionsList() {
     <>
       <Topbar title="Réunions" />
       <main className="content">
-        {instances.length > 1 && (
-          <div className="segmented" role="group" aria-label="Instance" style={{ marginBottom: 6 }}>
-            <button className={!inst ? "on" : ""} onClick={() => go({ v: "reunions" }, true)}>Toutes</button>
-            <button className={inst === "bureau" ? "on" : ""} onClick={() => go({ v: "reunions", i: "bureau" }, true)}>Bureau</button>
-            <button className={inst === "ca" ? "on" : ""} onClick={() => go({ v: "reunions", i: "ca" }, true)}>CA</button>
-          </div>
-        )}
         <ErrorBox msg={q.error} />
         {q.loading && !q.data ? <Spinner /> : list.length === 0 ? (
           <Empty icon={<ICalendar />}>Aucune réunion enregistrée.</Empty>
@@ -46,31 +43,32 @@ export function ReunionsList() {
           <section key={y}>
             <div className="section-title">{y}</div>
             <div className="stack">
-              {rs.map((r) => {
-                const nd = q.data?.nDocs.get(r.id) ?? 0;
-                const na = q.data?.nAct.get(r.id) ?? 0;
-                return (
-                  <button key={r.id} className="list-item" onClick={() => go({ v: "reunion", id: r.id })}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="row" style={{ marginBottom: 4 }}>
-                        <InstanceBadge i={r.instance} />
-                        <span className="muted small">{fmtDate(r.date_reunion)}</span>
-                      </div>
-                      <div style={{ fontWeight: 650 }}>{r.titre}</div>
-                      <div className="tiny muted" style={{ marginTop: 2 }}>
-                        {nd ? `${nd} document${nd > 1 ? "s" : ""}` : "Pas de compte rendu"} · {na} action{na > 1 ? "s" : ""}
-                      </div>
+              {rs.map((r) => (
+                <button key={r.id} className="list-item" onClick={() => go({ v: "reunion", id: r.id })}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="muted small" style={{ marginBottom: 2 }}>{fmtDate(r.date_reunion)}</div>
+                    <div style={{ fontWeight: 600 }}>{r.titre}</div>
+                    <div className="row wrap" style={{ gap: 6, marginTop: 6 }}>
+                      {ORDER.filter((i) => instances.includes(i)).map((i) => {
+                        const nd = q.data?.nDocs.get(q.data.key(r.id, i)) ?? 0;
+                        const na = q.data?.nAct.get(q.data.key(r.id, i)) ?? 0;
+                        return (
+                          <span key={i} className={`badge instance-${i}`} style={{ opacity: nd || na ? 1 : 0.55 }}>
+                            {i === "bureau" ? "CS" : "CA"} · {nd ? `${nd} CR` : "pas de CR"} · {na} action{na > 1 ? "s" : ""}
+                          </span>
+                        );
+                      })}
                     </div>
-                    <IChevron width={20} className="muted" />
-                  </button>
-                );
-              })}
+                  </div>
+                  <IChevron width={20} className="muted" />
+                </button>
+              ))}
             </div>
           </section>
         ))}
       </main>
       {me.is_admin && (
-        <button className="fab" onClick={() => go({ v: "reunion-form", instance: inst || undefined })}><IPlus />Réunion</button>
+        <button className="fab" onClick={() => go({ v: "reunion-form" })}><IPlus />Réunion</button>
       )}
     </>
   );
@@ -84,106 +82,135 @@ async function openDoc(d: Doc, toast: (m: string) => void) {
   if (w) w.location.href = data.signedUrl; else window.location.href = data.signedUrl;
 }
 
-function safeName(name: string) {
+export function safeName(name: string) {
   const dot = name.lastIndexOf(".");
   const ext = dot > 0 ? name.slice(dot).toLowerCase() : "";
   const stem = (dot > 0 ? name.slice(0, dot) : name).normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-zA-Z0-9-_]+/g, "-").slice(0, 60);
   return `${Date.now()}-${stem || "document"}${ext}`;
 }
 
-export async function uploadDocs(reunionId: string, files: FileList | File[], uploaderId: string) {
-  for (const f of Array.from(files)) {
-    const path = `${reunionId}/${safeName(f.name)}`;
+export async function uploadDocs(reunionId: string, instance: Instance, files: File[], uploaderId: string) {
+  for (const f of files) {
+    const path = `${reunionId}/${instance}/${safeName(f.name)}`;
     const up = await supabase.storage.from(BUCKET).upload(path, f, { contentType: f.type || undefined, upsert: false });
     if (up.error) throw up.error;
     const ins = await supabase.from("documents").insert({
-      reunion_id: reunionId, nom_fichier: f.name, storage_path: path, taille: f.size, mime_type: f.type || null, uploaded_by: uploaderId,
+      reunion_id: reunionId, instance, nom_fichier: f.name, storage_path: path, taille: f.size, mime_type: f.type || null, uploaded_by: uploaderId,
     });
     if (ins.error) { await supabase.storage.from(BUCKET).remove([path]); throw ins.error; }
   }
 }
 
-export function ReunionDetail({ id }: { id: string }) {
-  const { me, go, back, toast, bump, dataVersion } = useApp();
+function SectionBlock({ r, i, docs, notes, actions }: { r: Reunion; i: Instance; docs: Doc[]; notes: string | null; actions: Action[] }) {
+  const { me, go, toast, bump } = useApp();
   const [uploading, setUploading] = useState(false);
+  return (
+    <section className="reunion-section">
+      <div className="reunion-section-head">
+        <InstanceBadge i={i} />
+        <h3>{instanceLabel(i)}</h3>
+      </div>
+
+      <div className="section-title">Compte rendu</div>
+      <div className="card stack">
+        {docs.length === 0 && <div className="muted small">Aucun document joint pour l'instant.</div>}
+        {docs.map((d) => (
+          <div key={d.id} className="row">
+            <button className="doc" onClick={() => openDoc(d, toast)}>
+              <span className="ico"><IFile width={20} /></span>
+              <span style={{ minWidth: 0 }}>
+                <span className="name">{d.nom_fichier}</span>
+                <span className="tiny muted" style={{ display: "block" }}>{fmtSize(d.taille)}{d.taille ? " · " : ""}Ajouté le {fmtDate(d.created_at, true)}</span>
+              </span>
+            </button>
+            {me.is_admin && (
+              <button className="icon-btn" aria-label={`Supprimer ${d.nom_fichier}`} onClick={async () => {
+                if (!window.confirm(`Supprimer « ${d.nom_fichier} » ?`)) return;
+                await supabase.storage.from(BUCKET).remove([d.storage_path]);
+                const { error } = await supabase.from("documents").delete().eq("id", d.id);
+                if (error) toast(errMsg(error)); else { toast("Document supprimé"); bump(); }
+              }}><ITrash width={20} /></button>
+            )}
+          </div>
+        ))}
+        {me.is_admin && (
+          <DropZone busy={uploading} label={`Joindre le compte rendu ${i === "bureau" ? "du conseil scolaire" : "du CA"}`} onFiles={async (fs) => {
+            setUploading(true);
+            try { await uploadDocs(r.id, i, fs, me.id); toast(fs.length > 1 ? `${fs.length} documents ajoutés` : "Document ajouté"); bump(); }
+            catch (e) { toast(errMsg(e)); } finally { setUploading(false); }
+          }} />
+        )}
+      </div>
+
+      {notes && (
+        <>
+          <div className="section-title">{i === "ca" ? "Synthèse et notes" : "Notes"}</div>
+          <div className="card prose">{notes}</div>
+        </>
+      )}
+
+      <div className="section-title">Actions décidées ({actions.length})</div>
+      <div className="stack">
+        {actions.length === 0 && <div className="card muted small">Aucune action rattachée à cette section.</div>}
+        {sortActions(actions).map((a) => <ActionCard key={a.id} a={a} showInstance={false} />)}
+        {me.is_admin && (
+          <button className="btn block" onClick={() => go({ v: "action-form", reunion: r.id, instance: i })}>
+            <IPlus width={20} />Ajouter une action
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}
+
+export function ReunionDetail({ id }: { id: string }) {
+  const { me, go, back, route, toast, bump, instances, dataVersion } = useApp();
   const q = useQuery(async () => {
     const { data, error } = await supabase.from("reunions").select("*").eq("id", id).maybeSingle();
     if (error) throw error;
     if (!data) return null;
-    const [d, a] = await Promise.all([
+    const [d, a, s] = await Promise.all([
       supabase.from("documents").select("*").eq("reunion_id", id).order("created_at"),
       supabase.from("actions").select("*").eq("reunion_id", id),
+      supabase.from("reunion_sections").select("*").eq("reunion_id", id),
     ]);
-    return { r: data as Reunion, docs: (d.data as Doc[]) ?? [], actions: (a.data as Action[]) ?? [] };
+    return { r: data as Reunion, docs: (d.data as Doc[]) ?? [], actions: (a.data as Action[]) ?? [], sections: (s.data as ReunionSection[]) ?? [] };
   }, [id, dataVersion]);
 
   if (q.loading && !q.data) return (<><Topbar title="Réunion" backTo /><Spinner /></>);
   if (!q.data) return (<><Topbar title="Réunion" backTo /><main className="content"><ErrorBox msg={q.error} /><Empty>Réunion introuvable ou non accessible.</Empty></main></>);
-  const { r, docs, actions } = q.data;
-
-  async function onFiles(files: File[]) {
-    if (!files.length) return;
-    setUploading(true);
-    try { await uploadDocs(r.id, files, me.id); toast(files.length > 1 ? `${files.length} documents ajoutés` : "Document ajouté"); bump(); }
-    catch (e) { toast(errMsg(e)); }
-    finally { setUploading(false); }
-  }
+  const { r, docs, actions, sections } = q.data;
+  const visible = ORDER.filter((i) => instances.includes(i));
+  const tab = (visible.includes(route.s as Instance) ? route.s : visible[0]) as Instance;
 
   return (
     <>
-      <Topbar title={r.instance === "bureau" ? "Bureau" : "Conseil d'administration"} backTo right={me.is_admin && (
+      <Topbar title="Réunion" backTo right={me.is_admin && (
         <button className="icon-btn" aria-label="Modifier" onClick={() => go({ v: "reunion-form", id: r.id })}><IEdit /></button>
       )} />
       <main className="content">
         <div className="detail-head">
-          <div className="row"><InstanceBadge i={r.instance} /><span className="muted small">{fmtDate(r.date_reunion)}</span></div>
+          <div className="muted small">{fmtDate(r.date_reunion)}</div>
           <h2>{r.titre}</h2>
         </div>
 
-        <div className="section-title">Compte rendu</div>
-        <div className="card stack">
-          {docs.length === 0 && <div className="muted small">Aucun document joint pour l'instant.</div>}
-          {docs.map((d) => (
-            <div key={d.id} className="row">
-              <button className="doc" onClick={() => openDoc(d, toast)}>
-                <span className="ico"><IFile width={20} /></span>
-                <span style={{ minWidth: 0 }}>
-                  <span className="name">{d.nom_fichier}</span>
-                  <span className="tiny muted" style={{ display: "block" }}>{fmtSize(d.taille)}{d.taille ? " · " : ""}Ajouté le {fmtDate(d.created_at, true)}</span>
-                </span>
+        {visible.length > 1 && (
+          <div className="segmented" role="tablist" aria-label="Section" style={{ position: "sticky", top: 64, zIndex: 5 }}>
+            {visible.map((i) => (
+              <button key={i} role="tab" aria-selected={tab === i} className={tab === i ? "on" : ""}
+                onClick={() => go({ v: "reunion", id: r.id, s: i }, true)}>
+                {i === "bureau" ? "Conseil scolaire" : "Conseil d'administration"}
               </button>
-              {me.is_admin && (
-                <button className="icon-btn" aria-label={`Supprimer ${d.nom_fichier}`} onClick={async () => {
-                  if (!window.confirm(`Supprimer « ${d.nom_fichier} » ?`)) return;
-                  await supabase.storage.from(BUCKET).remove([d.storage_path]);
-                  const { error } = await supabase.from("documents").delete().eq("id", d.id);
-                  if (error) toast(errMsg(error)); else { toast("Document supprimé"); bump(); }
-                }}><ITrash width={20} /></button>
-              )}
-            </div>
-          ))}
-          {me.is_admin && (
-            <DropZone onFiles={onFiles} busy={uploading} />
-          )}
-        </div>
-
-        {r.notes && (
-          <>
-            <div className="section-title">{r.instance === "ca" ? "Synthèse et notes" : "Notes"}</div>
-            <div className="card prose">{r.notes}</div>
-          </>
+            ))}
+          </div>
         )}
 
-        <div className="section-title">Actions décidées ({actions.length})</div>
-        <div className="stack">
-          {actions.length === 0 && <div className="card muted small">Aucune action rattachée à cette réunion.</div>}
-          {sortActions(actions).map((a) => <ActionCard key={a.id} a={a} showInstance={false} />)}
-          {me.is_admin && (
-            <button className="btn block" onClick={() => go({ v: "action-form", reunion: r.id, instance: r.instance })}>
-              <IPlus width={20} />Ajouter une action
-            </button>
-          )}
-        </div>
+        {tab && (
+          <SectionBlock key={tab} r={r} i={tab}
+            docs={docs.filter((d) => d.instance === tab)}
+            notes={sections.find((s) => s.instance === tab)?.notes ?? null}
+            actions={actions.filter((a) => a.instance === tab)} />
+        )}
 
         {me.is_admin && (
           <div style={{ marginTop: 28 }}>
@@ -193,7 +220,7 @@ export function ReunionDetail({ id }: { id: string }) {
               if (error) { toast(errMsg(error)); return; }
               toast("Réunion supprimée"); bump(); back({ v: "reunions" });
             }} />
-            <p className="tiny muted">Les actions rattachées sont conservées.</p>
+            <p className="tiny muted">Supprime les deux sections et leurs documents. Les actions rattachées sont conservées.</p>
           </div>
         )}
       </main>
@@ -201,53 +228,62 @@ export function ReunionDetail({ id }: { id: string }) {
   );
 }
 
-export function ReunionForm({ id, instance }: { id?: string; instance?: string }) {
-  const { me, go, back, toast, bump, instances } = useApp();
+export function ReunionForm({ id }: { id?: string; instance?: string }) {
+  const { me, go, back, toast, bump } = useApp();
   const q = useQuery(async () => {
     if (!id) return null;
-    const { data } = await supabase.from("reunions").select("*").eq("id", id).maybeSingle();
-    return data as Reunion | null;
+    const [r, s] = await Promise.all([
+      supabase.from("reunions").select("*").eq("id", id).maybeSingle(),
+      supabase.from("reunion_sections").select("*").eq("reunion_id", id),
+    ]);
+    return { r: r.data as Reunion | null, sections: (s.data as ReunionSection[]) ?? [] };
   }, [id]);
-  if (!me.is_admin) return (<><Topbar title="Réunion" backTo /><main className="content"><Empty>Réservé aux administrateurs.</Empty></main></>);
+  if (!me.is_admin) return (<><Topbar title="Réunion" backTo /><main className="content"><Empty>Réservé aux admins.</Empty></main></>);
   if (id && q.loading) return (<><Topbar title="Modifier la réunion" backTo /><Spinner /></>);
-  return <ReunionFormInner initial={q.data ?? null} defaultInstance={(instance as Instance) || instances[0]}
+  return <ReunionFormInner initial={q.data?.r ?? null} sections={q.data?.sections ?? []}
     onSaved={(rid, isNew) => { toast(isNew ? "Réunion créée" : "Réunion mise à jour"); bump(); if (isNew) go({ v: "reunion", id: rid }, true); else back(); }}
     onCancel={() => back()} />;
 }
 
-function ReunionFormInner({ initial, defaultInstance, onSaved, onCancel }: {
-  initial: Reunion | null; defaultInstance: Instance; onSaved: (id: string, isNew: boolean) => void; onCancel: () => void;
+function ReunionFormInner({ initial, sections, onSaved, onCancel }: {
+  initial: Reunion | null; sections: ReunionSection[]; onSaved: (id: string, isNew: boolean) => void; onCancel: () => void;
 }) {
   const { me } = useApp();
-  const [inst, setInst] = useState<Instance>(initial?.instance ?? defaultInstance);
   const [date, setDate] = useState(initial?.date_reunion ?? todayISO());
   const [titre, setTitre] = useState(initial?.titre ?? "");
-  const [notes, setNotes] = useState(initial?.notes ?? "");
-  const [files, setFiles] = useState<File[]>([]);
+  const [notes, setNotes] = useState<Record<Instance, string>>({
+    bureau: sections.find((s) => s.instance === "bureau")?.notes ?? "",
+    ca: sections.find((s) => s.instance === "ca")?.notes ?? "",
+  });
+  const [files, setFiles] = useState<Record<Instance, File[]>>({ bureau: [], ca: [] });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const autoTitle = () => {
     const m = new Date(date + "T00:00:00").toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
-    return `${inst === "bureau" ? "Bureau" : "Conseil d'administration"} de ${m}`;
+    return `Réunion de ${m}`;
   };
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setBusy(true); setError(null);
-    const row = { instance: inst, date_reunion: date, titre: titre.trim() || autoTitle(), notes: notes.trim() || null };
+    const row = { date_reunion: date, titre: titre.trim() || autoTitle() };
     try {
+      let rid: string;
       if (initial) {
         const { error } = await supabase.from("reunions").update(row).eq("id", initial.id);
         if (error) throw error;
-        if (files.length) await uploadDocs(initial.id, files, me.id);
-        onSaved(initial.id, false);
+        rid = initial.id;
       } else {
         const { data, error } = await supabase.from("reunions").insert({ ...row, created_by: me.id }).select("id").single();
         if (error) throw error;
-        if (files.length) await uploadDocs(data.id, files, me.id);
-        onSaved(data.id, true);
+        rid = data.id;
       }
+      const secRows = ORDER.map((i) => ({ reunion_id: rid, instance: i, notes: notes[i].trim() || null, updated_at: new Date().toISOString() }));
+      const { error: sErr } = await supabase.from("reunion_sections").upsert(secRows, { onConflict: "reunion_id,instance" });
+      if (sErr) throw sErr;
+      for (const i of ORDER) if (files[i].length) await uploadDocs(rid, i, files[i], me.id);
+      onSaved(rid, !initial);
     } catch (err) {
       setError(errMsg(err));
     } finally {
@@ -260,43 +296,39 @@ function ReunionFormInner({ initial, defaultInstance, onSaved, onCancel }: {
       <Topbar title={initial ? "Modifier la réunion" : "Nouvelle réunion"} backTo />
       <main className="content">
         <form className="stack-lg" onSubmit={submit}>
-          <div className="field"><span>Instance</span>
-            <div className="segmented">
-              <button type="button" className={inst === "bureau" ? "on" : ""} onClick={() => setInst("bureau")}>Bureau</button>
-              <button type="button" className={inst === "ca" ? "on" : ""} onClick={() => setInst("ca")}>Conseil d'administration</button>
-            </div>
-            <span className="hint">{inst === "bureau" ? "Visible par les membres du bureau." : "Visible par les administrateurs du conseil."}</span>
-          </div>
           <label className="field"><span>Date</span>
             <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
           </label>
           <label className="field"><span>Titre <span className="hint">(facultatif)</span></span>
             <input className="input" value={titre} onChange={(e) => setTitre(e.target.value)} placeholder={autoTitle()} />
           </label>
-          <label className="field"><span>{inst === "ca" ? "Synthèse du bureau et notes" : "Notes"} <span className="hint">(facultatif)</span></span>
-            <textarea className="textarea" value={notes} onChange={(e) => setNotes(e.target.value)} style={{ minHeight: 140 }} />
-          </label>
-          <div className="field"><span>Compte rendu <span className="hint">(facultatif)</span></span>
-            <DropZone label="Ajouter le compte rendu" onFiles={(fs) => setFiles((prev) => [...prev, ...fs])} />
-            {files.length > 0 && (
-              <div className="stack" style={{ gap: 6 }}>
-                {files.map((f, i) => (
-                  <div key={i} className="doc" style={{ cursor: "default" }}>
+
+          {ORDER.map((i) => (
+            <fieldset key={i} className="form-section">
+              <legend><InstanceBadge i={i} /> {instanceLabel(i)}</legend>
+              <span className="hint">{i === "bureau" ? "Visible par les membres ayant l'accès Conseil scolaire." : "Visible par les membres ayant l'accès Conseil d'administration."}</span>
+              <label className="field"><span>{i === "ca" ? "Synthèse du conseil scolaire et notes" : "Notes"} <span className="hint">(facultatif)</span></span>
+                <textarea className="textarea" value={notes[i]} onChange={(e) => setNotes((n) => ({ ...n, [i]: e.target.value }))} />
+              </label>
+              <div className="field"><span>Compte rendu <span className="hint">(facultatif)</span></span>
+                <DropZone label="Ajouter le compte rendu" onFiles={(fs) => setFiles((p) => ({ ...p, [i]: [...p[i], ...fs] }))} />
+                {files[i].map((f, k) => (
+                  <div key={k} className="doc" style={{ cursor: "default" }}>
                     <span className="ico"><IFile width={20} /></span>
                     <span style={{ minWidth: 0, flex: 1 }}>
                       <span className="name">{f.name}</span>
                       <span className="tiny muted" style={{ display: "block" }}>{fmtSize(f.size)} · envoyé à l'enregistrement</span>
                     </span>
-                    <button type="button" className="icon-btn" aria-label={`Retirer ${f.name}`} onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}><ITrash width={20} /></button>
+                    <button type="button" className="icon-btn" aria-label={`Retirer ${f.name}`} onClick={() => setFiles((p) => ({ ...p, [i]: p[i].filter((_, j) => j !== k) }))}><ITrash width={20} /></button>
                   </div>
                 ))}
               </div>
-            )}
-          </div>
+            </fieldset>
+          ))}
+
           <ErrorBox msg={error} />
           <button className="btn primary block" disabled={busy}>{busy ? "Enregistrement…" : initial ? "Enregistrer" : "Créer la réunion"}</button>
           <button type="button" className="btn ghost block" onClick={onCancel}>Annuler</button>
-          <p className="tiny muted" style={{ margin: 0 }}>{instanceLabel(inst)} · {fmtDate(date)}</p>
         </form>
       </main>
     </>

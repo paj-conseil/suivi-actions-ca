@@ -1,7 +1,8 @@
-import { supabase, type Action, type Reunion, sante, isClosed, fmtDate, instanceLabel, SANTE_LABEL, type Sante } from "../lib";
+import { supabase, type Action, type AdminDoc, type Association, type Reunion, canAssociations, etatDoc, sante, isClosed, fmtDate, instanceLabel, SANTE_LABEL, type Sante } from "../lib";
 import { useApp, useQuery } from "../store";
 import { ActionCard, Empty, ErrorBox, InstanceBadge, Logo, Spinner, Topbar } from "../components/ui";
 import { IChevron, ICheck } from "../components/Icons";
+import { DocCard, sortDocs } from "./Associations";
 
 export function sortActions(list: Action[]): Action[] {
   const rank: Record<Sante, number> = { retard: 0, bloquee: 1, proche: 2, en_cours: 3, a_faire: 4, terminee: 5, abandonnee: 6 };
@@ -18,13 +19,15 @@ export function sortActions(list: Action[]): Action[] {
 export function Dashboard() {
   const { me, go, instances, dataVersion } = useApp();
   const q = useQuery(async () => {
-    const [a, r] = await Promise.all([
+    const [a, r, d, as] = await Promise.all([
       supabase.from("actions").select("*"),
       supabase.from("reunions").select("*").order("date_reunion", { ascending: false }).limit(20),
+      canAssociations(me) ? supabase.from("admin_documents").select("*").eq("archive", false) : Promise.resolve({ data: [], error: null }),
+      canAssociations(me) ? supabase.from("associations").select("*") : Promise.resolve({ data: [], error: null }),
     ]);
     if (a.error) throw a.error;
     if (r.error) throw r.error;
-    return { actions: a.data as Action[], reunions: r.data as Reunion[] };
+    return { actions: a.data as Action[], reunions: r.data as Reunion[], docs: (d.data ?? []) as AdminDoc[], assocs: (as.data ?? []) as Association[] };
   }, [dataVersion]);
 
   const actions = q.data?.actions ?? [];
@@ -38,9 +41,7 @@ export function Dashboard() {
     { s: "en_cours", filter: "ouvertes" },
   ];
 
-  const lastByInstance = instances.map((i) => ({
-    i, r: q.data?.reunions.find((x) => x.instance === i),
-  }));
+  const lastReunions = (q.data?.reunions ?? []).slice(0, 3);
 
   return (
     <>
@@ -76,18 +77,35 @@ export function Dashboard() {
               </div>
             )}
 
+            {canAssociations(me) && (() => {
+              const alerts = sortDocs((q.data?.docs ?? []).filter((d) => ["expire", "a_renouveler"].includes(etatDoc(d))));
+              const short = (id: string) => q.data?.assocs.find((x) => x.id === id)?.code === "college" ? "Collège" : "Primaire";
+              return (
+                <>
+                  <div className="section-title">Documents à renouveler</div>
+                  {alerts.length === 0 ? (
+                    <div className="card"><Empty icon={<ICheck />}>Aucun document expiré ou à renouveler.</Empty></div>
+                  ) : (
+                    <div className="stack">
+                      {alerts.slice(0, 5).map((d) => <DocCard key={d.id} d={d} assoc={short(d.association_id)} />)}
+                      {alerts.length > 5 && <button className="btn block" onClick={() => go({ v: "associations", f: "alertes" })}>Voir les {alerts.length} documents</button>}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+
             <div className="section-title">Dernières réunions</div>
             <div className="stack">
-              {lastByInstance.map(({ i, r }) => r ? (
-                <button key={i} className="list-item" onClick={() => go({ v: "reunion", id: r.id })}>
+              {lastReunions.length === 0 && <div className="card muted small">Aucune réunion enregistrée.</div>}
+              {lastReunions.map((r) => (
+                <button key={r.id} className="list-item" onClick={() => go({ v: "reunion", id: r.id })}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="row" style={{ marginBottom: 4 }}><InstanceBadge i={i} /><span className="muted small">{fmtDate(r.date_reunion)}</span></div>
-                    <div style={{ fontWeight: 650 }}>{r.titre}</div>
+                    <div className="muted small" style={{ marginBottom: 2 }}>{fmtDate(r.date_reunion)}</div>
+                    <div style={{ fontWeight: 600 }}>{r.titre}</div>
                   </div>
                   <IChevron width={20} className="muted" />
                 </button>
-              ) : (
-                <div key={i} className="card muted small">Aucune réunion {i === "bureau" ? "de bureau" : "du conseil"} enregistrée.</div>
               ))}
             </div>
 

@@ -65,7 +65,7 @@ export function ActionsList() {
           {instances.length > 1 && (
             <div className="segmented" role="group" aria-label="Instance">
               <button className={!inst ? "on" : ""} onClick={() => set({ i: "" })}>Toutes</button>
-              <button className={inst === "bureau" ? "on" : ""} onClick={() => set({ i: "bureau" })}>Bureau</button>
+              <button className={inst === "bureau" ? "on" : ""} onClick={() => set({ i: "bureau" })}>Conseil scolaire</button>
               <button className={inst === "ca" ? "on" : ""} onClick={() => set({ i: "ca" })}>CA</button>
             </div>
           )}
@@ -180,7 +180,7 @@ export function ActionDetail({ id }: { id: string }) {
             <dt>Statut</dt><dd><StatutBadge s={a.statut} /></dd>
             <dt>Échéance</dt><dd className={`s-${sante(a)}`} style={{ color: ["retard", "proche"].includes(sante(a)) ? "var(--fg)" : undefined }}>{echeanceText(a)}</dd>
             {a.perimetre && (<><dt>Périmètre</dt><dd>{a.perimetre}</dd></>)}
-            <dt>Instance</dt><dd>{instanceLabel(a.instance)}</dd>
+            <dt>Section</dt><dd>{instanceLabel(a.instance)}</dd>
             {reunion && (<><dt>Décidée lors</dt><dd><a href="#" onClick={(e) => { e.preventDefault(); go({ v: "reunion", id: reunion.id }); }}>{reunion.titre}</a><div className="tiny muted">{fmtDate(reunion.date_reunion)}</div></dd></>)}
           </dl>
           {a.description && (<><div className="section-title" style={{ marginTop: 16 }}>Description</div><div className="prose">{a.description}</div></>)}
@@ -252,10 +252,10 @@ export function ActionForm({ id, reunionId, instance }: { id?: string; reunionId
     return { a: a.data as Action | null, reunions: (r.data as Reunion[]) ?? [], perims };
   }, [id]);
 
-  if (!me.is_admin) return (<><Topbar title="Action" backTo /><main className="content"><Empty>Réservé aux administrateurs.</Empty></main></>);
+  if (!me.is_admin) return (<><Topbar title="Action" backTo /><main className="content"><Empty>Réservé aux admins.</Empty></main></>);
   if (q.loading && !q.data) return (<><Topbar title={id ? "Modifier l'action" : "Nouvelle action"} backTo /><Spinner /></>);
   return <ActionFormInner key={q.data?.a?.id ?? "new"} initial={q.data?.a ?? null} reunions={q.data?.reunions ?? []} perims={q.data?.perims ?? []}
-    defaultReunion={reunionId} defaultInstance={(instance as Instance) || (q.data?.reunions.find((r) => r.id === reunionId)?.instance) || instances[instances.length - 1]}
+    defaultReunion={reunionId} defaultInstance={(instance as Instance) || instances[instances.length - 1]}
     people={people} onSaved={(newId, isNew) => { toast(isNew ? "Action créée" : "Action mise à jour"); bump(); if (isNew) go({ v: "action", id: newId }, true); else back(); }}
     onCancel={() => back()} />;
 }
@@ -277,7 +277,7 @@ function ActionFormInner({ initial, reunions, perims, defaultReunion, defaultIns
   const [error, setError] = useState<string | null>(null);
 
   const eligible = people.filter((p) => p.actif && canSeeInstance(p, inst));
-  const reunionsInst = reunions.filter((r) => r.instance === inst);
+  const reunionsInst = reunions;
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -316,9 +316,9 @@ function ActionFormInner({ initial, reunions, perims, defaultReunion, defaultIns
           <label className="field"><span>Intitulé</span>
             <input className="input" value={titre} onChange={(e) => setTitre(e.target.value)} placeholder="Ex. Relancer le devis toiture" required />
           </label>
-          <div className="field"><span>Instance</span>
+          <div className="field"><span>Section</span>
             <div className="segmented">
-              <button type="button" className={inst === "bureau" ? "on" : ""} onClick={() => { setInst("bureau"); setReunion(""); }}>Bureau</button>
+              <button type="button" className={inst === "bureau" ? "on" : ""} onClick={() => { setInst("bureau"); setReunion(""); }}>Conseil scolaire</button>
               <button type="button" className={inst === "ca" ? "on" : ""} onClick={() => { setInst("ca"); setReunion(""); }}>Conseil d'administration</button>
             </div>
             <span className="hint">Détermine qui peut voir l'action.</span>

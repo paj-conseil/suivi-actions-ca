@@ -22,13 +22,14 @@ export interface Profile {
   is_admin: boolean;
   is_bureau: boolean;
   is_ca: boolean;
+  is_associations: boolean;
   must_change_password: boolean;
   actif: boolean;
 }
 
 export interface Reunion {
   id: string;
-  instance: Instance;
+  instance: Instance | null;
   date_reunion: string;
   titre: string;
   notes: string | null;
@@ -38,11 +39,19 @@ export interface Reunion {
 export interface Doc {
   id: string;
   reunion_id: string;
+  instance: Instance;
   nom_fichier: string;
   storage_path: string;
   taille: number | null;
   mime_type: string | null;
   created_at: string;
+}
+
+export interface ReunionSection {
+  id: string;
+  reunion_id: string;
+  instance: Instance;
+  notes: string | null;
 }
 
 export interface Action {
@@ -79,8 +88,8 @@ export const STATUTS: { value: Statut; label: string }[] = [
   { value: "abandonnee", label: "Abandonnée" },
 ];
 export const statutLabel = (s: Statut) => STATUTS.find((x) => x.value === s)?.label ?? s;
-export const instanceLabel = (i: Instance) => (i === "bureau" ? "Bureau" : "Conseil d'administration");
-export const instanceShort = (i: Instance) => (i === "bureau" ? "Bureau" : "CA");
+export const instanceLabel = (i: Instance) => (i === "bureau" ? "Conseil scolaire" : "Conseil d'administration");
+export const instanceShort = (i: Instance) => (i === "bureau" ? "Conseil scolaire" : "CA");
 
 export const isClosed = (s: Statut) => s === "terminee" || s === "abandonnee";
 
@@ -188,3 +197,136 @@ export async function adminUsers<T = Record<string, unknown>>(body: Record<strin
   if (data?.error) throw new Error(data.error);
   return data as T;
 }
+
+// ---------- Associations et documents administratifs ----------
+export interface Association {
+  id: string;
+  code: "primaire" | "college";
+  nom: string;
+  notes: string | null;
+  ordre: number;
+}
+
+export interface AdminDoc {
+  id: string;
+  association_id: string;
+  categorie: string;
+  titre: string;
+  date_signature: string | null;
+  date_validite: string | null;
+  sans_echeance: boolean;
+  rappel_jours: number;
+  responsable_id: string | null;
+  notes: string | null;
+  archive: boolean;
+  remplace_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminFile {
+  id: string;
+  document_id: string;
+  nom_fichier: string;
+  storage_path: string;
+  taille: number | null;
+  mime_type: string | null;
+  created_at: string;
+}
+
+export const canAssociations = (p: Pick<Profile, "is_admin" | "is_associations">) => p.is_admin || p.is_associations;
+
+export type EtatDoc = "expire" | "a_renouveler" | "a_renseigner" | "valide" | "permanent" | "archive";
+
+export const ETAT_LABEL: Record<EtatDoc, string> = {
+  expire: "Expiré",
+  a_renouveler: "À renouveler",
+  a_renseigner: "À renseigner",
+  valide: "Valide",
+  permanent: "Sans échéance",
+  archive: "Remplacé",
+};
+
+/** Classe de couleur réutilisant les codes des actions */
+export const ETAT_CLASS: Record<EtatDoc, string> = {
+  expire: "s-retard",
+  a_renouveler: "s-proche",
+  a_renseigner: "s-a_faire",
+  valide: "s-terminee",
+  permanent: "s-en_cours",
+  archive: "s-abandonnee",
+};
+
+export function etatDoc(d: Pick<AdminDoc, "archive" | "sans_echeance" | "date_validite" | "rappel_jours">): EtatDoc {
+  if (d.archive) return "archive";
+  if (d.sans_echeance) return "permanent";
+  if (!d.date_validite) return "a_renseigner";
+  const n = daysUntil(d.date_validite);
+  if (n < 0) return "expire";
+  if (n <= d.rappel_jours) return "a_renouveler";
+  return "valide";
+}
+
+export function validiteText(d: Pick<AdminDoc, "archive" | "sans_echeance" | "date_validite" | "rappel_jours">): string {
+  if (d.sans_echeance) return "Sans date de fin";
+  if (!d.date_validite) return "Date de validité à renseigner";
+  const n = daysUntil(d.date_validite);
+  if (d.archive) return `Valable jusqu'au ${fmtDate(d.date_validite)}`;
+  if (n < -1) return `Expiré depuis ${-n} jours (${fmtDate(d.date_validite, true)})`;
+  if (n === -1) return "Expiré depuis hier";
+  if (n === 0) return "Expire aujourd'hui";
+  if (n === 1) return "Expire demain";
+  if (n <= 60) return `Expire dans ${n} jours · ${fmtDate(d.date_validite, true)}`;
+  return `Valable jusqu'au ${fmtDate(d.date_validite)}`;
+}
+
+export function addYears(iso: string, years: number): string {
+  const d = new Date(iso + "T00:00:00");
+  d.setFullYear(d.getFullYear() + years);
+  d.setDate(d.getDate() - 1);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+
+export const CATEGORIES = [
+  "Statuts et gouvernance",
+  "Identification",
+  "Fiscalité et dons",
+  "Assurances",
+  "Locaux et sécurité",
+  "Établissement scolaire",
+  "Social et personnel",
+  "Finances",
+  "Données personnelles",
+  "Contrats",
+  "Autre",
+];
+
+/** Liste de départ à adapter avec le bureau et l'expert-comptable */
+export const LISTE_TYPE: { categorie: string; titre: string }[] = [
+  { categorie: "Statuts et gouvernance", titre: "Statuts à jour signés" },
+  { categorie: "Statuts et gouvernance", titre: "Récépissé de déclaration en préfecture" },
+  { categorie: "Statuts et gouvernance", titre: "Publication au Journal officiel" },
+  { categorie: "Statuts et gouvernance", titre: "Déclaration des dirigeants en préfecture" },
+  { categorie: "Statuts et gouvernance", titre: "Procès-verbal de la dernière assemblée générale" },
+  { categorie: "Statuts et gouvernance", titre: "Procès-verbal d'élection du bureau" },
+  { categorie: "Statuts et gouvernance", titre: "Règlement intérieur de l'association" },
+  { categorie: "Identification", titre: "Avis de situation SIRENE (SIRET)" },
+  { categorie: "Identification", titre: "RIB de l'association" },
+  { categorie: "Fiscalité et dons", titre: "Rescrit fiscal (reçus fiscaux pour les dons)" },
+  { categorie: "Assurances", titre: "Assurance responsabilité civile" },
+  { categorie: "Assurances", titre: "Assurance multirisque des locaux" },
+  { categorie: "Assurances", titre: "Assurance individuelle accident des élèves" },
+  { categorie: "Locaux et sécurité", titre: "Bail ou convention d'occupation des locaux" },
+  { categorie: "Locaux et sécurité", titre: "Procès-verbal de la commission de sécurité" },
+  { categorie: "Locaux et sécurité", titre: "Vérification des installations électriques" },
+  { categorie: "Locaux et sécurité", titre: "Vérification des extincteurs et alarmes" },
+  { categorie: "Locaux et sécurité", titre: "Document unique d'évaluation des risques (DUERP)" },
+  { categorie: "Établissement scolaire", titre: "Déclaration d'ouverture de l'établissement" },
+  { categorie: "Établissement scolaire", titre: "Déclaration du directeur auprès des autorités" },
+  { categorie: "Établissement scolaire", titre: "Règlement intérieur de l'établissement" },
+  { categorie: "Social et personnel", titre: "Attestation de vigilance URSSAF" },
+  { categorie: "Social et personnel", titre: "Contrat de prévoyance et mutuelle" },
+  { categorie: "Finances", titre: "Comptes annuels approuvés" },
+  { categorie: "Finances", titre: "Budget prévisionnel voté" },
+  { categorie: "Données personnelles", titre: "Registre des traitements RGPD" },
+];

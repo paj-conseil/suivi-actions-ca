@@ -3,13 +3,14 @@ import { supabase, fullName } from "../lib";
 import { useApp } from "../store";
 import { Avatar, Topbar } from "../components/ui";
 import { ChangePassword } from "./Auth";
+import { IChevron, IUsers } from "../components/Icons";
 
 export function ProfilePage() {
-  const { me, toast } = useApp();
+  const { me, toast, go } = useApp();
   const [changing, setChanging] = useState(false);
   return (
     <>
-      <Topbar title="Profil" />
+      <Topbar title={me.is_admin ? "Réglages" : "Profil"} />
       <main className="content">
         <div className="card row" style={{ gap: 14 }}>
           <Avatar p={me} />
@@ -21,10 +22,25 @@ export function ProfilePage() {
 
         <div className="section-title">Mes accès</div>
         <div className="card row wrap" style={{ gap: 6 }}>
-          {me.is_admin && <span className="badge role">Administrateur</span>}
-          {me.is_bureau && <span className="badge instance-bureau">Bureau</span>}
+          {me.is_admin && <span className="badge role">Admin</span>}
+          {me.is_bureau && <span className="badge instance-bureau">Conseil scolaire</span>}
           {me.is_ca && <span className="badge instance-ca">Conseil d'administration</span>}
+          {me.is_associations && <span className="badge role">Associations</span>}
         </div>
+
+        {me.is_admin && (
+          <>
+            <div className="section-title">Administration</div>
+            <button className="list-item" onClick={() => go({ v: "users" })}>
+              <IUsers width={24} className="muted" />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600 }}>Membres et droits d'accès</div>
+                <div className="tiny muted">Créer un compte, attribuer les accès, réinitialiser un mot de passe</div>
+              </div>
+              <IChevron width={20} className="muted" />
+            </button>
+          </>
+        )}
 
         <div className="section-title">Sécurité</div>
         <div className="card">

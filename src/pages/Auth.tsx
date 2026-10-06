@@ -43,7 +43,7 @@ export function Login() {
 
   return (
     <div className="auth-wrap">
-      <Brand subtitle="Bureau et conseil d'administration" />
+      <Brand subtitle="Conseil scolaire et conseil d'administration" />
       <form className="stack-lg" onSubmit={submit}>
         {mode === "forgot" && (
           <div className="alert info">

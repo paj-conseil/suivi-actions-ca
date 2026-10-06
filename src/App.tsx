@@ -8,8 +8,10 @@ import { ActionsList, ActionDetail, ActionForm } from "./pages/Actions";
 import { ReunionsList, ReunionDetail, ReunionForm } from "./pages/Reunions";
 import { UsersPage } from "./pages/Users";
 import { ProfilePage } from "./pages/Profile";
+import { AssociationsPage, AdminDocDetail, AdminDocForm } from "./pages/Associations";
+import { canAssociations } from "./lib";
 import { Spinner } from "./components/ui";
-import { ICalendar, IHome, IList, IUser, IUsers } from "./components/Icons";
+import { IBuilding, ICalendar, IHome, IList, IUser } from "./components/Icons";
 
 export default function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
@@ -44,7 +46,7 @@ export default function App() {
       <div className="auth-wrap stack-lg">
         <div className="alert error">
           Votre compte n'a pas accès à l'application.
-          <br />Contactez un administrateur.
+          <br />Contactez un admin.
         </div>
         <button className="btn block" onClick={() => supabase.auth.signOut()}>Se déconnecter</button>
       </div>
@@ -73,8 +75,8 @@ function Shell() {
     { v: "home", label: "Accueil", icon: <IHome />, match: ["home"] },
     { v: "actions", label: "Actions", icon: <IList />, match: ["actions", "action", "action-form"] },
     { v: "reunions", label: "Réunions", icon: <ICalendar />, match: ["reunions", "reunion", "reunion-form"] },
-    ...(me.is_admin ? [{ v: "users", label: "Membres", icon: <IUsers />, match: ["users"] }] : []),
-    { v: "profile", label: "Profil", icon: <IUser />, match: ["profile"] },
+    ...(canAssociations(me) ? [{ v: "associations", label: "Associations", icon: <IBuilding />, match: ["associations", "doc", "doc-form"] }] : []),
+    { v: "profile", label: me.is_admin ? "Réglages" : "Profil", icon: <IUser />, match: ["profile", "users"] },
   ];
 
   let page;
@@ -85,6 +87,9 @@ function Shell() {
     case "reunions": page = <ReunionsList />; break;
     case "reunion": page = <ReunionDetail id={route.id!} />; break;
     case "reunion-form": page = <ReunionForm id={route.id} instance={route.instance} />; break;
+    case "associations": page = <AssociationsPage />; break;
+    case "doc": page = <AdminDocDetail id={route.id!} />; break;
+    case "doc-form": page = <AdminDocForm id={route.id} assoc={route.assoc} renew={route.renew} />; break;
     case "users": page = me.is_admin ? <UsersPage /> : <Dashboard />; break;
     case "profile": page = <ProfilePage />; break;
     default: page = <Dashboard />;
