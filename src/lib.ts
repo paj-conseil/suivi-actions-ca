@@ -19,6 +19,7 @@ export interface Profile {
   prenom: string;
   nom: string;
   email: string;
+  fonction: string | null;
   is_admin: boolean;
   is_bureau: boolean;
   is_ca: boolean;

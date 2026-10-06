@@ -39,6 +39,7 @@ export function UsersPage() {
               <Avatar p={p} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 650 }}>{fullName(p)}{p.id === me.id && <span className="muted small"> (vous)</span>}</div>
+                {p.fonction && <div className="small" style={{ color: "var(--accent)", fontWeight: 600 }}>{p.fonction}</div>}
                 <div className="tiny muted" style={{ marginBottom: 6, overflow: "hidden", textOverflow: "ellipsis" }}>{p.email}</div>
                 <Roles p={p} />
               </div>
@@ -75,6 +76,7 @@ function UserSheet({ user, onClose, onSaved, onCreds }: {
   const [prenom, setPrenom] = useState(user?.prenom ?? "");
   const [nom, setNom] = useState(user?.nom ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
+  const [fonction, setFonction] = useState(user?.fonction ?? "");
   const [isAdmin, setIsAdmin] = useState(user?.is_admin ?? false);
   const [isBureau, setIsBureau] = useState(user?.is_bureau ?? false);
   const [isCa, setIsCa] = useState(user?.is_ca ?? true);
@@ -90,13 +92,13 @@ function UserSheet({ user, onClose, onSaved, onCreds }: {
     try {
       if (!user) {
         const res = await adminUsers<{ id: string; password: string }>({
-          action: "create", prenom, nom, email, is_admin: isAdmin, is_bureau: isBureau, is_ca: isCa, is_associations: isAssoc,
+          action: "create", prenom, nom, email, fonction, is_admin: isAdmin, is_bureau: isBureau, is_ca: isCa, is_associations: isAssoc,
         });
         await refreshPeople();
         onCreds({ prenom, email: email.trim().toLowerCase(), password: res.password, reset: false });
       } else {
         await adminUsers({
-          action: "update", id: user.id, prenom, nom,
+          action: "update", id: user.id, prenom, nom, fonction,
           email: email.trim().toLowerCase() !== user.email ? email : undefined,
           is_admin: isAdmin, is_bureau: isBureau, is_ca: isCa, is_associations: isAssoc, actif,
         });
@@ -122,6 +124,12 @@ function UserSheet({ user, onClose, onSaved, onCreds }: {
             <input className="input" value={nom} onChange={(e) => setNom(e.target.value)} required autoComplete="off" />
           </label>
         </div>
+        <label className="field"><span>Fonction <span className="hint">(facultatif)</span></span>
+          <input className="input" list="fonctions" value={fonction} onChange={(e) => setFonction(e.target.value)} placeholder="Ex. Président, Directeur, Trésorière" autoComplete="off" />
+          <datalist id="fonctions">
+            {["Président", "Vice-président", "Trésorier", "Secrétaire", "Directeur", "Directrice adjointe", "Administrateur", "Membre du conseil scolaire"].map((x) => <option key={x} value={x} />)}
+          </datalist>
+        </label>
         <label className="field"><span>Email</span>
           <input className="input" type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="off" />
         </label>

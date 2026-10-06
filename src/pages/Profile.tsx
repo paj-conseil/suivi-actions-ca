@@ -16,6 +16,7 @@ export function ProfilePage() {
           <Avatar p={me} />
           <div style={{ minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: 18 }}>{fullName(me)}</div>
+            {me.fonction && <div className="small" style={{ color: "var(--accent)", fontWeight: 600 }}>{me.fonction}</div>}
             <div className="small muted" style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{me.email}</div>
           </div>
         </div>

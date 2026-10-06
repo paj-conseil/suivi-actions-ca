@@ -101,6 +101,7 @@ export function ActionsList() {
                   <div>
                     <div className="name">{fullName(p)}</div>
                     <div className="tiny muted">
+                      {p?.fonction && <span style={{ color: "var(--accent)", fontWeight: 600 }}>{p.fonction} · </span>}
                       {items.length} action{items.length > 1 ? "s" : ""}
                       {items.some((a) => sante(a) === "retard") && ` · ${items.filter((a) => sante(a) === "retard").length} en retard`}
                     </div>
@@ -176,7 +177,7 @@ export function ActionDetail({ id }: { id: string }) {
         </div>
         <div className="card">
           <dl className="kv">
-            <dt>Responsable</dt><dd className="row"><Avatar p={resp} sm />{fullName(resp)}</dd>
+            <dt>Responsable</dt><dd className="row"><Avatar p={resp} sm /><span>{fullName(resp)}{resp?.fonction && <span className="tiny muted" style={{ display: "block", fontWeight: 400 }}>{resp.fonction}</span>}</span></dd>
             <dt>Statut</dt><dd><StatutBadge s={a.statut} /></dd>
             <dt>Échéance</dt><dd className={`s-${sante(a)}`} style={{ color: ["retard", "proche"].includes(sante(a)) ? "var(--fg)" : undefined }}>{echeanceText(a)}</dd>
             {a.perimetre && (<><dt>Périmètre</dt><dd>{a.perimetre}</dd></>)}
@@ -326,7 +327,7 @@ function ActionFormInner({ initial, reunions, perims, defaultReunion, defaultIns
           <label className="field"><span>Responsable</span>
             <select className="select" value={responsable} onChange={(e) => setResponsable(e.target.value)} required>
               <option value="">Choisir…</option>
-              {eligible.map((p) => <option key={p.id} value={p.id}>{fullName(p)}</option>)}
+              {eligible.map((p) => <option key={p.id} value={p.id}>{fullName(p)}{p.fonction ? ` (${p.fonction})` : ""}</option>)}
             </select>
           </label>
           <label className="field"><span>Échéance</span>

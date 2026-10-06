@@ -53,6 +53,7 @@ Deno.serve(async (req) => {
       const email = String(body.email ?? "").trim().toLowerCase();
       const prenom = String(body.prenom ?? "").trim();
       const nom = String(body.nom ?? "").trim();
+      const fonction = String(body.fonction ?? "").trim() || null;
       if (!email || !prenom || !nom) return json({ error: "Nom, prénom et email sont obligatoires" }, 400);
       const password = (body.password as string) || genPassword();
       if (password.length < 8) return json({ error: "Mot de passe provisoire trop court (8 caractères min.)" }, 400);
@@ -66,7 +67,7 @@ Deno.serve(async (req) => {
         return json({ error: msg }, 400);
       }
       const { error: pErr } = await admin.from("profiles").insert({
-        id: data.user.id, email, prenom, nom,
+        id: data.user.id, email, prenom, nom, fonction,
         is_admin: !!body.is_admin, is_bureau: !!body.is_bureau, is_ca: !!body.is_ca, is_associations: !!body.is_associations,
         must_change_password: true, actif: true,
       });
@@ -84,8 +85,8 @@ Deno.serve(async (req) => {
         return json({ error: "Vous ne pouvez pas retirer vos propres droits d'administrateur" }, 400);
       }
       const patch: Record<string, unknown> = {};
-      for (const k of ["prenom", "nom", "is_admin", "is_bureau", "is_ca", "is_associations", "actif"]) {
-        if (k in body) patch[k] = typeof body[k] === "string" ? (body[k] as string).trim() : body[k];
+      for (const k of ["prenom", "nom", "fonction", "is_admin", "is_bureau", "is_ca", "is_associations", "actif"]) {
+        if (k in body) patch[k] = typeof body[k] === "string" ? ((body[k] as string).trim() || (k === "fonction" ? null : "")) : body[k];
       }
       if (body.email) {
         const email = String(body.email).trim().toLowerCase();
