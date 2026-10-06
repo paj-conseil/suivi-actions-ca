@@ -24,6 +24,8 @@ export interface Profile {
   is_bureau: boolean;
   is_ca: boolean;
   is_associations: boolean;
+  assoc_modification: boolean;
+  assoc_suppression: boolean;
   must_change_password: boolean;
   actif: boolean;
 }
@@ -235,7 +237,16 @@ export interface AdminFile {
   created_at: string;
 }
 
-export const canAssociations = (p: Pick<Profile, "is_admin" | "is_associations">) => p.is_admin || p.is_associations;
+type AssocRights = Pick<Profile, "is_admin" | "is_associations" | "assoc_modification" | "assoc_suppression">;
+/** Lecture de la section Associations */
+export const canAssociations = (p: AssocRights) => p.is_admin || p.is_associations || p.assoc_modification || p.assoc_suppression;
+export const canAssocModifier = (p: AssocRights) => p.is_admin || p.assoc_modification;
+export const canAssocSupprimer = (p: AssocRights) => p.is_admin || p.assoc_suppression;
+export function assocNiveau(p: AssocRights): string | null {
+  if (p.is_admin) return null;
+  const n = [canAssociations(p) && "lecture", p.assoc_modification && "modification", p.assoc_suppression && "suppression"].filter(Boolean);
+  return n.length ? `Associations : ${n.join(", ")}` : null;
+}
 
 export type EtatDoc = "expire" | "a_renouveler" | "a_renseigner" | "valide" | "permanent" | "archive";
 

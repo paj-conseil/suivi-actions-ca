@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import {
   supabase, type AdminDoc, type AdminFile, type Association, type EtatDoc, CATEGORIES, ETAT_CLASS, ETAT_LABEL, LISTE_TYPE,
-  addYears, canAssociations, errMsg, etatDoc, fmtDate, fmtSize, fullName, todayISO, validiteText,
+  addYears, canAssocModifier, canAssocSupprimer, canAssociations, errMsg, etatDoc, fmtDate, fmtSize, fullName, todayISO, validiteText,
 } from "../lib";
 import { useApp, useQuery } from "../store";
 import { Avatar, ConfirmButton, DropZone, Empty, ErrorBox, Sheet, Spinner, Topbar } from "../components/ui";
@@ -86,7 +86,7 @@ export function AssociationsPage() {
   const active = ofAssoc.filter((d) => !d.archive);
   const count = (e: EtatDoc) => active.filter((d) => etatDoc(d) === e).length;
 
-  if (!canAssociations(me)) return (<><Topbar title="Associations" /><main className="content"><Empty>Cette section nécessite le droit d'accès « Associations ».</Empty></main></>);
+  if (!canAssociations(me)) return (<><Topbar title="Associations" /><main className="content"><Empty>Cette section nécessite au moins le droit « Lecture » de la section Associations.</Empty></main></>);
 
   async function addTemplate() {
     if (!current) return;
@@ -145,7 +145,7 @@ export function AssociationsPage() {
                 <Empty icon={<IFile />}>
                   {active.length === 0 ? "Aucun document enregistré pour cette association." : "Aucun document pour ce filtre."}
                 </Empty>
-                {active.length === 0 && (
+                {active.length === 0 && canAssocModifier(me) && (
                   <button className="btn block" onClick={() => setAdding(true)}>Partir d'une liste type</button>
                 )}
               </div>
@@ -156,13 +156,13 @@ export function AssociationsPage() {
               </section>
             ))}
 
-            {active.length > 0 && (
+            {active.length > 0 && canAssocModifier(me) && (
               <button className="btn ghost block" style={{ marginTop: 18 }} onClick={() => setAdding(true)}>Compléter avec la liste type</button>
             )}
           </>
         )}
       </main>
-      {current && (
+      {current && canAssocModifier(me) && (
         <button className="fab" onClick={() => go({ v: "doc-form", assoc: current.id })}><IPlus />Document</button>
       )}
 
@@ -256,12 +256,14 @@ export function AdminDocDetail({ id }: { id: string }) {
   const { d, files, assoc, older, newer } = q.data;
   const resp = d.responsable_id ? peopleById.get(d.responsable_id) : null;
   const e = etatDoc(d);
+  const canEdit = canAssocModifier(me);
+  const canDelete = canAssocSupprimer(me);
 
   return (
     <>
-      <Topbar title={assoc?.code === "college" ? "Association du Collège" : "Association du Primaire"} backTo right={
+      <Topbar title={assoc?.code === "college" ? "Association du Collège" : "Association du Primaire"} backTo right={canEdit && (
         <button className="icon-btn" aria-label="Modifier" onClick={() => go({ v: "doc-form", id: d.id })}><IEdit /></button>
-      } />
+      )} />
       <main className="content">
         <div className="detail-head">
           <div className="row wrap"><EtatBadge d={d} /><span className="badge">{d.categorie}</span></div>
@@ -286,7 +288,7 @@ export function AdminDocDetail({ id }: { id: string }) {
           {d.notes && (<><div className="section-title" style={{ marginTop: 16 }}>Notes</div><div className="prose">{d.notes}</div></>)}
         </div>
 
-        {!d.archive && (
+        {!d.archive && canEdit && (
           <button className="btn primary block" style={{ marginTop: 14 }} onClick={() => go({ v: "doc-form", renew: d.id })}>
             Enregistrer le renouvellement
           </button>
@@ -304,19 +306,23 @@ export function AdminDocDetail({ id }: { id: string }) {
                   <span className="tiny muted" style={{ display: "block" }}>{fmtSize(f.taille)}{f.taille ? " · " : ""}Ajouté le {fmtDate(f.created_at, true)}</span>
                 </span>
               </button>
-              <button className="icon-btn" aria-label={`Supprimer ${f.nom_fichier}`} onClick={async () => {
-                if (!window.confirm(`Supprimer « ${f.nom_fichier} » ?`)) return;
-                await supabase.storage.from(BUCKET).remove([f.storage_path]);
-                const { error } = await supabase.from("admin_document_files").delete().eq("id", f.id);
-                if (error) toast(errMsg(error)); else { toast("Pièce supprimée"); bump(); }
-              }}><ITrash width={20} /></button>
+              {canDelete && (
+                <button className="icon-btn" aria-label={`Supprimer ${f.nom_fichier}`} onClick={async () => {
+                  if (!window.confirm(`Supprimer « ${f.nom_fichier} » ?`)) return;
+                  await supabase.storage.from(BUCKET).remove([f.storage_path]);
+                  const { error } = await supabase.from("admin_document_files").delete().eq("id", f.id);
+                  if (error) toast(errMsg(error)); else { toast("Pièce supprimée"); bump(); }
+                }}><ITrash width={20} /></button>
+              )}
             </div>
           ))}
-          <DropZone busy={uploading} label="Joindre le document signé" onFiles={async (fs) => {
-            setUploading(true);
-            try { await uploadFiles(d.id, fs, me.id); toast(fs.length > 1 ? `${fs.length} pièces ajoutées` : "Pièce ajoutée"); bump(); }
-            catch (err) { toast(errMsg(err)); } finally { setUploading(false); }
-          }} />
+          {canEdit && (
+            <DropZone busy={uploading} label="Joindre le document signé" onFiles={async (fs) => {
+              setUploading(true);
+              try { await uploadFiles(d.id, fs, me.id); toast(fs.length > 1 ? `${fs.length} pièces ajoutées` : "Pièce ajoutée"); bump(); }
+              catch (err) { toast(errMsg(err)); } finally { setUploading(false); }
+            }} />
+          )}
         </div>
 
         {older.length > 0 && (
@@ -326,7 +332,7 @@ export function AdminDocDetail({ id }: { id: string }) {
           </>
         )}
 
-        <div style={{ marginTop: 28 }}>
+        {canDelete && <div style={{ marginTop: 28 }}>
           <ConfirmButton label="Supprimer ce document" confirmLabel="Confirmer : document et pièces supprimés" onConfirm={async () => {
             if (files.length) await supabase.storage.from(BUCKET).remove(files.map((f) => f.storage_path));
             const { error } = await supabase.from("admin_documents").delete().eq("id", d.id);
@@ -334,7 +340,7 @@ export function AdminDocDetail({ id }: { id: string }) {
             toast("Document supprimé"); bump(); back({ v: "associations", a: assoc?.code });
           }} />
           <p className="tiny muted">Pour un renouvellement, préférez « Enregistrer le renouvellement » : l'ancienne version reste consultable.</p>
-        </div>
+        </div>}
       </main>
     </>
   );
@@ -351,7 +357,7 @@ export function AdminDocForm({ id, assoc, renew }: { id?: string; assoc?: string
     return { d: d.data as AdminDoc | null, assocs: (a.data as Association[]) ?? [] };
   }, [srcId]);
   const title = renew ? "Renouvellement" : id ? "Modifier le document" : "Nouveau document";
-  if (!canAssociations(me)) return (<><Topbar title={title} backTo /><main className="content"><Empty>Accès réservé.</Empty></main></>);
+  if (!canAssocModifier(me)) return (<><Topbar title={title} backTo /><main className="content"><Empty>Le droit « Modification » de la section Associations est nécessaire.</Empty></main></>);
   if (q.loading && !q.data) return (<><Topbar title={title} backTo /><Spinner /></>);
   return <AdminDocFormInner key={srcId ?? "new"} title={title} mode={renew ? "renew" : id ? "edit" : "new"} src={q.data?.d ?? null}
     assocs={q.data?.assocs ?? []} defaultAssoc={assoc} />;

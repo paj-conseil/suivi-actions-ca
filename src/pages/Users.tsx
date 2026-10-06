@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { adminUsers, errMsg, fullName, type Profile } from "../lib";
+import { adminUsers, errMsg, fullName, type Profile, assocNiveau, canAssociations } from "../lib";
 import { useApp } from "../store";
 import { Avatar, ConfirmButton, ErrorBox, Sheet, Topbar } from "../components/ui";
 import { IKey, IPlus } from "../components/Icons";
@@ -10,8 +10,8 @@ function Roles({ p }: { p: Profile }) {
       {p.is_admin && <span className="badge role">Admin</span>}
       {p.is_bureau && <span className="badge instance-bureau">Conseil scolaire</span>}
       {p.is_ca && <span className="badge instance-ca">CA</span>}
-      {p.is_associations && <span className="badge role">Associations</span>}
-      {!p.is_admin && !p.is_bureau && !p.is_ca && !p.is_associations && <span className="badge">Aucun accès</span>}
+      {assocNiveau(p) && <span className="badge role">{assocNiveau(p)}</span>}
+      {!p.is_admin && !p.is_bureau && !p.is_ca && !canAssociations(p) && <span className="badge">Aucun accès</span>}
       {!p.actif && <span className="badge s-retard">Désactivé</span>}
       {p.actif && p.must_change_password && <span className="badge s-proche">1re connexion à faire</span>}
     </span>
@@ -52,7 +52,7 @@ export function UsersPage() {
             <li><strong>Admin</strong> : voit et modifie tout, gère les membres.</li>
             <li><strong>Conseil scolaire</strong> : consulte la section Conseil scolaire des réunions et ses actions.</li>
             <li><strong>Conseil d'administration</strong> : consulte la section CA des réunions et ses actions.</li>
-            <li><strong>Associations</strong> : consulte et met à jour les documents administratifs des deux associations.</li>
+            <li><strong>Associations</strong> : trois niveaux cumulables, Lecture, Modification et Suppression des documents administratifs des deux associations.</li>
           </ul>
           <p className="muted tiny" style={{ marginBottom: 0 }}>Chaque responsable peut mettre à jour le statut et l'avancement de ses propres actions.</p>
         </div>
@@ -80,7 +80,10 @@ function UserSheet({ user, onClose, onSaved, onCreds }: {
   const [isAdmin, setIsAdmin] = useState(user?.is_admin ?? false);
   const [isBureau, setIsBureau] = useState(user?.is_bureau ?? false);
   const [isCa, setIsCa] = useState(user?.is_ca ?? true);
-  const [isAssoc, setIsAssoc] = useState(user?.is_associations ?? false);
+  const [aLect, setALect] = useState(user ? canAssociations({ ...user, is_admin: false }) : false);
+  const [aModif, setAModif] = useState(user?.assoc_modification ?? false);
+  const [aSuppr, setASuppr] = useState(user?.assoc_suppression ?? false);
+  const assocRights = { is_associations: aLect || aModif || aSuppr, assoc_modification: aModif, assoc_suppression: aSuppr };
   const [actif, setActif] = useState(user?.actif ?? true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,7 +95,7 @@ function UserSheet({ user, onClose, onSaved, onCreds }: {
     try {
       if (!user) {
         const res = await adminUsers<{ id: string; password: string }>({
-          action: "create", prenom, nom, email, fonction, is_admin: isAdmin, is_bureau: isBureau, is_ca: isCa, is_associations: isAssoc,
+          action: "create", prenom, nom, email, fonction, is_admin: isAdmin, is_bureau: isBureau, is_ca: isCa, ...assocRights,
         });
         await refreshPeople();
         onCreds({ prenom, email: email.trim().toLowerCase(), password: res.password, reset: false });
@@ -100,7 +103,7 @@ function UserSheet({ user, onClose, onSaved, onCreds }: {
         await adminUsers({
           action: "update", id: user.id, prenom, nom, fonction,
           email: email.trim().toLowerCase() !== user.email ? email : undefined,
-          is_admin: isAdmin, is_bureau: isBureau, is_ca: isCa, is_associations: isAssoc, actif,
+          is_admin: isAdmin, is_bureau: isBureau, is_ca: isCa, ...assocRights, actif,
         });
         if (self) await refreshMe();
         toast("Membre mis à jour");
@@ -141,8 +144,18 @@ function UserSheet({ user, onClose, onSaved, onCreds }: {
               <span><span className="t">Conseil scolaire</span><br /><span className="d">Section Conseil scolaire des réunions et ses actions</span></span></label>
             <label className="check"><input type="checkbox" checked={isCa} onChange={(e) => setIsCa(e.target.checked)} />
               <span><span className="t">Conseil d'administration</span><br /><span className="d">Section CA des réunions et ses actions</span></span></label>
-            <label className="check"><input type="checkbox" checked={isAssoc} onChange={(e) => setIsAssoc(e.target.checked)} />
-              <span><span className="t">Associations</span><br /><span className="d">Documents administratifs du Primaire et du Collège</span></span></label>
+            <div className="check-group">
+              <div className="cg-title">Section Associations<span className="d">Documents administratifs du Primaire et du Collège{isAdmin ? " · inclus dans Admin" : ""}</span></div>
+              <label className="check"><input type="checkbox" checked={isAdmin || aLect || aModif || aSuppr} disabled={isAdmin || aModif || aSuppr}
+                onChange={(e) => setALect(e.target.checked)} />
+                <span><span className="t">Lecture</span><br /><span className="d">Consulter les documents et leurs pièces</span></span></label>
+              <label className="check"><input type="checkbox" checked={isAdmin || aModif} disabled={isAdmin}
+                onChange={(e) => { setAModif(e.target.checked); if (e.target.checked) setALect(true); }} />
+                <span><span className="t">Modification</span><br /><span className="d">Ajouter, modifier, renouveler, joindre des pièces</span></span></label>
+              <label className="check"><input type="checkbox" checked={isAdmin || aSuppr} disabled={isAdmin}
+                onChange={(e) => { setASuppr(e.target.checked); if (e.target.checked) setALect(true); }} />
+                <span><span className="t">Suppression</span><br /><span className="d">Supprimer des documents et des pièces jointes</span></span></label>
+            </div>
             {user && !self && (
               <label className="check"><input type="checkbox" checked={actif} onChange={(e) => setActif(e.target.checked)} />
                 <span><span className="t">Compte actif</span><br /><span className="d">Décocher bloque la connexion sans supprimer l'historique</span></span></label>

@@ -410,3 +410,8 @@ h1, h2, h3, .hello, .brand h1, .detail-head h2, .group-head .name { font-family:
 .reunion-section-head h3 { margin: 0; font-size: 18px; color: var(--primary); }
 .form-section { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 14px; margin: 0; display: flex; flex-direction: column; gap: 14px; }
 .form-section legend { padding: 0 6px; font-family: var(--f-title); font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+
+.check-group { border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; background: var(--surface-2); }
+.check-group .cg-title { font-weight: 600; display: flex; flex-direction: column; }
+.check-group .cg-title .d { font-size: 13px; color: var(--muted); font-weight: 400; }
+.check input:disabled { opacity: .6; }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase, fullName } from "../lib";
+import { supabase, fullName, assocNiveau } from "../lib";
 import { useApp } from "../store";
 import { Avatar, Topbar } from "../components/ui";
 import { ChangePassword } from "./Auth";
@@ -26,7 +26,7 @@ export function ProfilePage() {
           {me.is_admin && <span className="badge role">Admin</span>}
           {me.is_bureau && <span className="badge instance-bureau">Conseil scolaire</span>}
           {me.is_ca && <span className="badge instance-ca">Conseil d'administration</span>}
-          {me.is_associations && <span className="badge role">Associations</span>}
+          {assocNiveau(me) && <span className="badge role">{assocNiveau(me)}</span>}
         </div>
 
         {me.is_admin && (
