@@ -19,7 +19,7 @@
   --accent: var(--red);
   --focus: var(--red);
 
-  --f-title: "Libre Baskerville", Georgia, "Times New Roman", serif;
+  --f-title: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
   --f-text: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
 
   /* Codes couleur des actions, accordés à la charte */
@@ -415,3 +415,7 @@ body { background: var(--bg); }
 .section-title, .card strong, .list-item [style*="font-weight: 600"], .list-item [style*="font-weight: 650"],
 .action-card .title, .doc .name, .field > span, .check .t, .cg-title, .brand h1 { color: var(--green); }
 .action-card.closed .title { color: var(--muted); }
+
+/* Titres en Poppins, comme le reste de l'interface */
+h1, h2, h3, .hello, .brand h1, .detail-head h2, .group-head .name, .reunion-section-head h3, .form-section legend { font-weight: 600; letter-spacing: -0.01em; }
+.kpi .n { font-weight: 600; }
