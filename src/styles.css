@@ -388,3 +388,18 @@ h1, h2, h3, .hello, .brand h1, .detail-head h2, .group-head .name { font-family:
 .auth-hero h1 { font-size: 26px; line-height: 1.2; margin: 0 0 6px; color: #fff; }
 .auth-hero p { margin: 0; color: #DDE5E3; font-size: 14.5px; }
 @media (prefers-color-scheme: dark) { .auth-hero { background: #0E2826; } }
+
+/* Zone de glisser-déposer */
+.dropzone {
+  border: 2px dashed var(--grey); border-radius: var(--radius); background: var(--surface);
+  padding: 18px 16px; text-align: center; cursor: pointer; color: var(--primary);
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  transition: background .15s ease, border-color .15s ease;
+}
+.dropzone:hover { border-color: var(--primary); }
+.dropzone.over { border-color: var(--red); background: var(--c-retard-bg); color: var(--red); }
+.dropzone.busy { opacity: .6; cursor: progress; }
+.dropzone .dz-title { font-weight: 600; }
+.dropzone .dz-hint { font-size: 13px; color: var(--muted); }
+.only-touch { display: none; }
+@media (hover: none) and (pointer: coarse) { .only-touch { display: inline; } .only-desktop { display: none; } }

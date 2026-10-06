@@ -1,10 +1,10 @@
-import { useRef, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import {
   supabase, type Action, type Doc, type Instance, type Reunion, errMsg, fmtDate, fmtSize, instanceLabel, todayISO,
 } from "../lib";
 import { useApp, useQuery } from "../store";
-import { ActionCard, ConfirmButton, Empty, ErrorBox, InstanceBadge, Spinner, Topbar } from "../components/ui";
-import { ICalendar, IChevron, IEdit, IFile, IPlus, ITrash, IUpload } from "../components/Icons";
+import { ActionCard, ConfirmButton, DropZone, Empty, ErrorBox, InstanceBadge, Spinner, Topbar } from "../components/ui";
+import { ICalendar, IChevron, IEdit, IFile, IPlus, ITrash } from "../components/Icons";
 import { sortActions } from "./Dashboard";
 
 const BUCKET = "comptes-rendus";
@@ -105,7 +105,6 @@ export async function uploadDocs(reunionId: string, files: FileList | File[], up
 
 export function ReunionDetail({ id }: { id: string }) {
   const { me, go, back, toast, bump, dataVersion } = useApp();
-  const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const q = useQuery(async () => {
     const { data, error } = await supabase.from("reunions").select("*").eq("id", id).maybeSingle();
@@ -122,12 +121,12 @@ export function ReunionDetail({ id }: { id: string }) {
   if (!q.data) return (<><Topbar title="Réunion" backTo /><main className="content"><ErrorBox msg={q.error} /><Empty>Réunion introuvable ou non accessible.</Empty></main></>);
   const { r, docs, actions } = q.data;
 
-  async function onFiles(files: FileList | null) {
-    if (!files?.length) return;
+  async function onFiles(files: File[]) {
+    if (!files.length) return;
     setUploading(true);
-    try { await uploadDocs(r.id, files, me.id); toast("Document ajouté"); bump(); }
+    try { await uploadDocs(r.id, files, me.id); toast(files.length > 1 ? `${files.length} documents ajoutés` : "Document ajouté"); bump(); }
     catch (e) { toast(errMsg(e)); }
-    finally { setUploading(false); if (fileRef.current) fileRef.current.value = ""; }
+    finally { setUploading(false); }
   }
 
   return (
@@ -164,13 +163,7 @@ export function ReunionDetail({ id }: { id: string }) {
             </div>
           ))}
           {me.is_admin && (
-            <>
-              <input ref={fileRef} type="file" multiple hidden onChange={(e) => onFiles(e.target.files)}
-                accept=".pdf,.doc,.docx,.odt,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.txt" />
-              <button className="btn block" disabled={uploading} onClick={() => fileRef.current?.click()}>
-                <IUpload width={20} />{uploading ? "Envoi en cours…" : "Joindre un document"}
-              </button>
-            </>
+            <DropZone onFiles={onFiles} busy={uploading} />
           )}
         </div>
 
@@ -283,11 +276,23 @@ function ReunionFormInner({ initial, defaultInstance, onSaved, onCancel }: {
           <label className="field"><span>{inst === "ca" ? "Synthèse du bureau et notes" : "Notes"} <span className="hint">(facultatif)</span></span>
             <textarea className="textarea" value={notes} onChange={(e) => setNotes(e.target.value)} style={{ minHeight: 140 }} />
           </label>
-          <label className="field"><span>Compte rendu <span className="hint">(PDF, Word…)</span></span>
-            <input className="input" type="file" multiple style={{ paddingTop: 11 }} onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
-              accept=".pdf,.doc,.docx,.odt,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.txt" />
-            {files.length > 0 && <span className="hint">{files.length} fichier{files.length > 1 ? "s" : ""} sélectionné{files.length > 1 ? "s" : ""}</span>}
-          </label>
+          <div className="field"><span>Compte rendu <span className="hint">(facultatif)</span></span>
+            <DropZone label="Ajouter le compte rendu" onFiles={(fs) => setFiles((prev) => [...prev, ...fs])} />
+            {files.length > 0 && (
+              <div className="stack" style={{ gap: 6 }}>
+                {files.map((f, i) => (
+                  <div key={i} className="doc" style={{ cursor: "default" }}>
+                    <span className="ico"><IFile width={20} /></span>
+                    <span style={{ minWidth: 0, flex: 1 }}>
+                      <span className="name">{f.name}</span>
+                      <span className="tiny muted" style={{ display: "block" }}>{fmtSize(f.size)} · envoyé à l'enregistrement</span>
+                    </span>
+                    <button type="button" className="icon-btn" aria-label={`Retirer ${f.name}`} onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}><ITrash width={20} /></button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <ErrorBox msg={error} />
           <button className="btn primary block" disabled={busy}>{busy ? "Enregistrement…" : initial ? "Enregistrer" : "Créer la réunion"}</button>
           <button type="button" className="btn ghost block" onClick={onCancel}>Annuler</button>

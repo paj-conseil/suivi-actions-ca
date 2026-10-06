@@ -1,10 +1,10 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   type Action, type Instance, type Profile, type Statut, echeanceText, fullName, initials,
   instanceShort, isClosed, sante, SANTE_LABEL, statutLabel,
 } from "../lib";
 import { useApp } from "../store";
-import { IBack, IClock, IUser } from "./Icons";
+import { IBack, IClock, IUpload, IUser } from "./Icons";
 
 export function Topbar({ title, backTo, right }: { title: string; backTo?: boolean; right?: ReactNode }) {
   const { back } = useApp();
@@ -108,4 +108,51 @@ export function Logo({ className, width }: { className?: string; width?: number 
   const [ok, setOk] = useState(true);
   if (!ok) return null;
   return <img src="./logo.png" alt="Groupe Scolaire Carlo Acutis" className={className} style={width ? { width } : undefined} onError={() => setOk(false)} />;
+}
+
+export const ACCEPT_DOCS = ".pdf,.doc,.docx,.odt,.xls,.xlsx,.ods,.ppt,.pptx,.odp,.jpg,.jpeg,.png,.txt";
+const MAX_SIZE = 25 * 1024 * 1024;
+
+/** Zone de dépôt : glisser-déposer sur ordinateur, touche pour choisir un fichier sur téléphone */
+export function DropZone({ onFiles, busy, label = "Joindre un document" }: {
+  onFiles: (files: File[]) => void; busy?: boolean; label?: string;
+}) {
+  const input = useRef<HTMLInputElement>(null);
+  const [over, setOver] = useState(false);
+  const [warn, setWarn] = useState<string | null>(null);
+  const depth = useRef(0);
+
+  function handle(list: FileList | null) {
+    const all = Array.from(list ?? []);
+    const tooBig = all.filter((f) => f.size > MAX_SIZE);
+    const ok = all.filter((f) => f.size <= MAX_SIZE);
+    setWarn(tooBig.length ? `${tooBig.map((f) => f.name).join(", ")} : fichier trop lourd (25 Mo maximum).` : null);
+    if (ok.length) onFiles(ok);
+    if (input.current) input.current.value = "";
+  }
+
+  return (
+    <div>
+      <div
+        role="button" tabIndex={0} aria-disabled={busy}
+        className={`dropzone ${over ? "over" : ""} ${busy ? "busy" : ""}`}
+        onClick={() => !busy && input.current?.click()}
+        onKeyDown={(e) => { if ((e.key === "Enter" || e.key === " ") && !busy) { e.preventDefault(); input.current?.click(); } }}
+        onDragEnter={(e) => { e.preventDefault(); depth.current += 1; setOver(true); }}
+        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; }}
+        onDragLeave={(e) => { e.preventDefault(); depth.current -= 1; if (depth.current <= 0) { depth.current = 0; setOver(false); } }}
+        onDrop={(e) => { e.preventDefault(); depth.current = 0; setOver(false); if (!busy) handle(e.dataTransfer.files); }}
+      >
+        <IUpload width={26} height={26} />
+        <div className="dz-title">{busy ? "Envoi en cours…" : over ? "Déposez le fichier ici" : label}</div>
+        <div className="dz-hint">
+          <span className="only-desktop">Glissez-déposez vos fichiers ici, ou cliquez pour les choisir.</span>
+          <span className="only-touch">Touchez pour choisir un fichier.</span>
+          <br />PDF, Word, Excel, images · 25 Mo max.
+        </div>
+      </div>
+      <input ref={input} type="file" multiple hidden accept={ACCEPT_DOCS} onChange={(e) => handle(e.target.files)} />
+      {warn && <div className="alert error small" style={{ marginTop: 8 }}>{warn}</div>}
+    </div>
+  );
 }
