@@ -1,6 +1,6 @@
 import { supabase, type Action, type Reunion, sante, isClosed, fmtDate, instanceLabel, SANTE_LABEL, type Sante } from "../lib";
 import { useApp, useQuery } from "../store";
-import { ActionCard, Empty, ErrorBox, InstanceBadge, Spinner, Topbar } from "../components/ui";
+import { ActionCard, Empty, ErrorBox, InstanceBadge, Logo, Spinner, Topbar } from "../components/ui";
 import { IChevron, ICheck } from "../components/Icons";
 
 export function sortActions(list: Action[]): Action[] {
@@ -44,7 +44,7 @@ export function Dashboard() {
 
   return (
     <>
-      <Topbar title="Accueil" />
+      <Topbar title="Accueil" right={<Logo className="logo-chip" />} />
       <main className="content">
         <div className="hello">Bonjour {me.prenom}</div>
         <p className="muted small" style={{ marginTop: 0 }}>

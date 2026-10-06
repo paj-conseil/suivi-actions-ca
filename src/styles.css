@@ -1,26 +1,38 @@
 :root {
-  --bg: #f6f4ef;
-  --surface: #ffffff;
-  --surface-2: #efece4;
-  --text: #1c2430;
-  --muted: #5f6b7a;
-  --line: #e2ddd2;
-  --primary: #1f3a5f;
-  --primary-ink: #ffffff;
-  --primary-soft: #e3eaf3;
-  --focus: #3b6fb6;
+  /* Charte Groupe Scolaire Carlo Acutis (version verte) */
+  --green: #163C3A;
+  --green-dark: #0E2826;
+  --red: #C0271F;
+  --rose: #F2B8B2;
+  --grey: #C9CECC;
+  --paper: #FBFAF7;
 
-  /* Codes couleur des actions */
-  --c-retard: #c0392b;      --c-retard-bg: #fbe9e7;
-  --c-proche: #b9770e;      --c-proche-bg: #fdf2dc;
-  --c-bloquee: #7d3c98;     --c-bloquee-bg: #f3e8f8;
-  --c-en_cours: #2563a8;    --c-en_cours-bg: #e4eefa;
-  --c-a_faire: #5f6b7a;     --c-a_faire-bg: #eceef1;
-  --c-terminee: #1e8449;    --c-terminee-bg: #e3f4ea;
-  --c-abandonnee: #8a8f96;  --c-abandonnee-bg: #efefef;
+  --bg: #F4F3EE;
+  --surface: #FFFFFF;
+  --surface-2: #ECEDE9;
+  --text: #1F2A29;
+  --muted: #5E6866;
+  --line: #DCE0DE;
+  --primary: var(--green);
+  --primary-ink: #FFFFFF;
+  --primary-soft: #E2EBE9;
+  --accent: var(--red);
+  --focus: var(--red);
 
-  --radius: 14px;
-  --shadow: 0 1px 2px rgba(28, 36, 48, 0.06), 0 2px 8px rgba(28, 36, 48, 0.05);
+  --f-title: "Libre Baskerville", Georgia, "Times New Roman", serif;
+  --f-text: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+
+  /* Codes couleur des actions, accordés à la charte */
+  --c-retard: #C0271F;      --c-retard-bg: #FBE7E5;
+  --c-proche: #A86A12;      --c-proche-bg: #FBEFD9;
+  --c-bloquee: #7A3E6E;     --c-bloquee-bg: #F3E6F0;
+  --c-en_cours: #2B5C8A;    --c-en_cours-bg: #E3EDF6;
+  --c-a_faire: #5E6866;     --c-a_faire-bg: #ECEDE9;
+  --c-terminee: #2E7D5B;    --c-terminee-bg: #E1F1E9;
+  --c-abandonnee: #8B9290;  --c-abandonnee-bg: #EEEFED;
+
+  --radius: 10px;
+  --shadow: 0 1px 2px rgba(22, 60, 58, 0.08), 0 2px 10px rgba(22, 60, 58, 0.06);
   --tabbar-h: 64px;
   --safe-b: env(safe-area-inset-bottom, 0px);
   color-scheme: light;
@@ -28,22 +40,24 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #12161c;
-    --surface: #1b2129;
-    --surface-2: #232b35;
-    --text: #e8ebef;
-    --muted: #9aa5b3;
-    --line: #2d3641;
-    --primary: #7fa7d9;
-    --primary-ink: #0f1620;
-    --primary-soft: #1f2e42;
-    --c-retard: #ef7a6c;      --c-retard-bg: #3a1f1c;
-    --c-proche: #e8b14f;      --c-proche-bg: #3a2e16;
-    --c-bloquee: #c69ae0;     --c-bloquee-bg: #33223d;
-    --c-en_cours: #7fb0ea;    --c-en_cours-bg: #1c2d42;
-    --c-a_faire: #a7b1bd;     --c-a_faire-bg: #262d36;
-    --c-terminee: #6fcf97;    --c-terminee-bg: #17311f;
-    --c-abandonnee: #8a8f96;  --c-abandonnee-bg: #262a2f;
+    --bg: #0B1D1C;
+    --surface: #132C2A;
+    --surface-2: #1B3936;
+    --text: #EEF2F1;
+    --muted: #A6B3B1;
+    --line: #24413E;
+    --primary: #8FC7BC;
+    --primary-ink: #0B1D1C;
+    --primary-soft: #1D3D3A;
+    --accent: #F2B8B2;
+    --focus: #F2B8B2;
+    --c-retard: #F28C84;      --c-retard-bg: #3A1F1E;
+    --c-proche: #E8B860;      --c-proche-bg: #3A2F18;
+    --c-bloquee: #D5A3CB;     --c-bloquee-bg: #34243A;
+    --c-en_cours: #8FBCE6;    --c-en_cours-bg: #1B3247;
+    --c-a_faire: #B6C0BE;     --c-a_faire-bg: #1F3532;
+    --c-terminee: #7FD1A9;    --c-terminee-bg: #173A2C;
+    --c-abandonnee: #8B9290;  --c-abandonnee-bg: #1E302E;
     color-scheme: dark;
   }
 }
@@ -53,7 +67,7 @@ html, body { margin: 0; padding: 0; }
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--f-text);
   font-size: 16px;
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
@@ -323,3 +337,54 @@ a { color: var(--primary); }
 .group-head { display: flex; align-items: center; gap: 10px; margin: 20px 2px 8px; }
 .group-head .name { font-weight: 700; }
 .pwd-box { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 20px; letter-spacing: .04em; background: var(--surface-2); padding: 14px; border-radius: 12px; text-align: center; user-select: all; }
+
+/* ================= Charte Carlo Acutis ================= */
+h1, h2, h3, .hello, .brand h1, .detail-head h2, .group-head .name { font-family: var(--f-title); font-weight: 700; letter-spacing: 0; }
+
+/* Bandeau vert en tête d'écran, comme sur les supports imprimés */
+.topbar { background: var(--green); color: #fff; border-bottom: 0; }
+.topbar.scrolled { border-bottom-color: transparent; box-shadow: 0 2px 10px rgba(0,0,0,.18); }
+.topbar h1 { font-size: 18px; color: #fff; }
+.topbar .icon-btn { color: #fff; }
+.topbar .icon-btn:active { background: rgba(255,255,255,.12); }
+.topbar .logo-chip { height: 36px; width: auto; background: #fff; border-radius: 6px; padding: 3px 6px; display: block; }
+@media (prefers-color-scheme: dark) { .topbar { background: #0E2826; } }
+
+.content { padding-top: 14px; }
+.hello { font-size: 24px; color: var(--primary); margin-top: 4px; }
+
+/* Intitulés de rubrique : capitales espacées et filet rouge */
+.section-title { color: var(--primary); letter-spacing: .12em; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+.section-title::after { content: ""; flex: 1; height: 2px; background: var(--red); opacity: .85; max-width: 48px; }
+
+.btn { font-weight: 600; border-radius: 8px; }
+.btn.primary:active { background: var(--green-dark); }
+.btn.danger { color: var(--red); background: var(--c-retard-bg); border-color: transparent; }
+.fab { background: var(--red); box-shadow: 0 6px 20px rgba(192, 39, 31, .32); color: #fff; }
+.chip.on { background: var(--green); border-color: var(--green); color: #fff; }
+@media (prefers-color-scheme: dark) { .chip.on { background: var(--primary); border-color: var(--primary); color: var(--primary-ink); } .fab { color: #fff; } }
+
+.tab.active { color: var(--primary); position: relative; }
+.tab.active::before { content: ""; position: absolute; top: 0; left: 30%; right: 30%; height: 3px; border-radius: 0 0 3px 3px; background: var(--red); }
+
+.badge.instance-bureau { --fg: #8A3B12; --bgc: #F8E5DA; }
+.badge.instance-ca { --fg: var(--green); --bgc: var(--primary-soft); }
+@media (prefers-color-scheme: dark) { .badge.instance-bureau { --fg: #F2B8B2; --bgc: #3A2423; } .badge.instance-ca { --fg: var(--primary); } }
+
+.kpi .n { font-family: var(--f-title); font-size: 30px; }
+.avatar { background: var(--primary-soft); color: var(--primary); font-family: var(--f-text); }
+.timeline li::before { background: var(--red); }
+.doc .ico { color: var(--red); }
+
+/* Écran de connexion façon flyer : bandeau vert, logo sur carte blanche */
+.auth-wrap { justify-content: flex-start; padding-top: 0; }
+.auth-hero {
+  margin: 0 -20px 26px; padding: calc(env(safe-area-inset-top, 0px) + 28px) 24px 26px;
+  background: var(--green); color: #fff;
+}
+.auth-hero .logo-card { display: inline-block; background: #fff; border-radius: 6px; padding: 10px 14px; box-shadow: 0 2px 10px rgba(0,0,0,.18); margin-bottom: 18px; }
+.auth-hero .logo-card img { width: 150px; height: auto; display: block; }
+.auth-hero .kicker { font-size: 12.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--rose); margin-bottom: 6px; }
+.auth-hero h1 { font-size: 26px; line-height: 1.2; margin: 0 0 6px; color: #fff; }
+.auth-hero p { margin: 0; color: #DDE5E3; font-size: 14.5px; }
+@media (prefers-color-scheme: dark) { .auth-hero { background: #0E2826; } }

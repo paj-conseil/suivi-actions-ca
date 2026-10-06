@@ -1,17 +1,14 @@
 import { useState, type FormEvent } from "react";
 import { errMsg, supabase } from "../lib";
-import { ErrorBox } from "../components/ui";
+import { ErrorBox, Logo } from "../components/ui";
 
 function Brand({ subtitle }: { subtitle: string }) {
   return (
-    <div className="brand">
-      <div className="brand-mark">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#f6f4ef" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>
-      </div>
-      <div>
-        <h1>Suivi actions CA</h1>
-        <p>{subtitle}</p>
-      </div>
+    <div className="auth-hero">
+      <div className="logo-card"><Logo /></div>
+      <div className="kicker">Groupe Scolaire Carlo Acutis</div>
+      <h1>Suivi des actions du conseil</h1>
+      <p>{subtitle}</p>
     </div>
   );
 }

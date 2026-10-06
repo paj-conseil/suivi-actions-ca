@@ -102,3 +102,10 @@ export function ConfirmButton({ label, confirmLabel, onConfirm, className = "btn
     }}>{armed ? confirmLabel : label}</button>
   );
 }
+
+/** Logo de l'établissement (public/logo.png) ; masqué proprement tant que le fichier est absent */
+export function Logo({ className, width }: { className?: string; width?: number }) {
+  const [ok, setOk] = useState(true);
+  if (!ok) return null;
+  return <img src="./logo.png" alt="Groupe Scolaire Carlo Acutis" className={className} style={width ? { width } : undefined} onError={() => setOk(false)} />;
+}

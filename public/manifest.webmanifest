@@ -3,8 +3,8 @@
   "short_name": "Actions CA",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#f6f4ef",
-  "theme_color": "#1f3a5f",
+  "background_color": "#F4F3EE",
+  "theme_color": "#163C3A",
   "lang": "fr",
   "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
 }
