@@ -3,7 +3,7 @@
   "short_name": "CA GSCA",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#FFFFFF",
+  "background_color": "#F3ECDF",
   "theme_color": "#163C3A",
   "lang": "fr",
   "icons": [

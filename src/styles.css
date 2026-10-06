@@ -7,12 +7,12 @@
   --grey: #C9CECC;
   --paper: #FBFAF7;
 
-  --bg: #F4F3EE;
+  --bg: #F3ECDF;
   --surface: #FFFFFF;
-  --surface-2: #ECEDE9;
+  --surface-2: #F1EEE8;
   --text: #1F2A29;
   --muted: #5E6866;
-  --line: #DCE0DE;
+  --line: #E3DCCD;
   --primary: var(--green);
   --primary-ink: #FFFFFF;
   --primary-soft: #E2EBE9;
@@ -38,29 +38,6 @@
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0B1D1C;
-    --surface: #132C2A;
-    --surface-2: #1B3936;
-    --text: #EEF2F1;
-    --muted: #A6B3B1;
-    --line: #24413E;
-    --primary: #8FC7BC;
-    --primary-ink: #0B1D1C;
-    --primary-soft: #1D3D3A;
-    --accent: #F2B8B2;
-    --focus: #F2B8B2;
-    --c-retard: #F28C84;      --c-retard-bg: #3A1F1E;
-    --c-proche: #E8B860;      --c-proche-bg: #3A2F18;
-    --c-bloquee: #D5A3CB;     --c-bloquee-bg: #34243A;
-    --c-en_cours: #8FBCE6;    --c-en_cours-bg: #1B3247;
-    --c-a_faire: #B6C0BE;     --c-a_faire-bg: #1F3532;
-    --c-terminee: #7FD1A9;    --c-terminee-bg: #173A2C;
-    --c-abandonnee: #8B9290;  --c-abandonnee-bg: #1E302E;
-    color-scheme: dark;
-  }
-}
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
@@ -197,7 +174,6 @@ a { color: var(--primary); }
 .badge .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
 .badge.instance-bureau { --fg: #8a5a12; --bgc: #f6ead2; }
 .badge.instance-ca { --fg: var(--primary); --bgc: var(--primary-soft); }
-@media (prefers-color-scheme: dark) { .badge.instance-bureau { --fg: #e8c27a; --bgc: #3a2f1a; } }
 .badge.role { --fg: var(--text); --bgc: var(--surface-2); font-weight: 600; }
 
 .s-retard     { --sante: var(--c-retard);     --fg: var(--c-retard);     --bgc: var(--c-retard-bg); }
@@ -348,7 +324,6 @@ h1, h2, h3, .hello, .brand h1, .detail-head h2, .group-head .name { font-family:
 .topbar .icon-btn { color: #fff; }
 .topbar .icon-btn:active { background: rgba(255,255,255,.12); }
 .topbar .logo-chip { height: 36px; width: auto; background: #fff; border-radius: 6px; padding: 3px 6px; display: block; }
-@media (prefers-color-scheme: dark) { .topbar { background: #0E2826; } }
 
 .content { padding-top: 14px; }
 .hello { font-size: 24px; color: var(--primary); margin-top: 4px; }
@@ -362,14 +337,12 @@ h1, h2, h3, .hello, .brand h1, .detail-head h2, .group-head .name { font-family:
 .btn.danger { color: var(--red); background: var(--c-retard-bg); border-color: transparent; }
 .fab { background: var(--red); box-shadow: 0 6px 20px rgba(192, 39, 31, .32); color: #fff; }
 .chip.on { background: var(--green); border-color: var(--green); color: #fff; }
-@media (prefers-color-scheme: dark) { .chip.on { background: var(--primary); border-color: var(--primary); color: var(--primary-ink); } .fab { color: #fff; } }
 
 .tab.active { color: var(--primary); position: relative; }
 .tab.active::before { content: ""; position: absolute; top: 0; left: 30%; right: 30%; height: 3px; border-radius: 0 0 3px 3px; background: var(--red); }
 
 .badge.instance-bureau { --fg: #8A3B12; --bgc: #F8E5DA; }
 .badge.instance-ca { --fg: var(--green); --bgc: var(--primary-soft); }
-@media (prefers-color-scheme: dark) { .badge.instance-bureau { --fg: #F2B8B2; --bgc: #3A2423; } .badge.instance-ca { --fg: var(--primary); } }
 
 .kpi .n { font-family: var(--f-title); font-size: 30px; }
 .avatar { background: var(--primary-soft); color: var(--primary); font-family: var(--f-text); }
@@ -387,7 +360,6 @@ h1, h2, h3, .hello, .brand h1, .detail-head h2, .group-head .name { font-family:
 .auth-hero .kicker { font-size: 12.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--rose); margin-bottom: 6px; }
 .auth-hero h1 { font-size: 26px; line-height: 1.2; margin: 0 0 6px; color: #fff; }
 .auth-hero p { margin: 0; color: #DDE5E3; font-size: 14.5px; }
-@media (prefers-color-scheme: dark) { .auth-hero { background: #0E2826; } }
 
 /* Zone de glisser-déposer */
 .dropzone {
@@ -420,7 +392,6 @@ h1, h2, h3, .hello, .brand h1, .detail-head h2, .group-head .name { font-family:
 .badge.tag-assoc { border: 1.5px solid currentColor; background: transparent; }
 .badge.tag-primaire { color: var(--green); }
 .badge.tag-college { color: var(--red); }
-@media (prefers-color-scheme: dark) { .badge.tag-primaire { color: var(--primary); } .badge.tag-college { color: var(--rose); } }
 .reunion-section + .reunion-section { margin-top: 30px; padding-top: 22px; border-top: 2px solid var(--line); }
 .reunion-section-head h3 { font-size: 20px; }
 .reunion-section-head { border-left: 5px solid var(--green); padding-left: 10px; }
@@ -436,3 +407,11 @@ h1, h2, h3, .hello, .brand h1, .detail-head h2, .group-head .name { font-family:
 .install-qr { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
 .install-qr img { border-radius: 8px; border: 1px solid var(--line); background: #fff; padding: 6px; }
 .install-qr .small { flex: 1; min-width: 180px; }
+
+/* Fond beige clair et titres en vert foncé de la charte */
+:root { color-scheme: light; }
+body { background: var(--bg); }
+.content h2, .detail-head h2, .hello, .group-head .name, .reunion-section-head h3,
+.section-title, .card strong, .list-item [style*="font-weight: 600"], .list-item [style*="font-weight: 650"],
+.action-card .title, .doc .name, .field > span, .check .t, .cg-title, .brand h1 { color: var(--green); }
+.action-card.closed .title { color: var(--muted); }
