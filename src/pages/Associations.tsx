@@ -25,6 +25,16 @@ export function sortDocs(list: AdminDoc[]) {
   });
 }
 
+/** Du plus récemment signé au plus ancien ; les documents sans date de signature en fin de liste */
+export function sortBySignature(list: AdminDoc[]) {
+  return [...list].sort((a, b) => {
+    if (a.date_signature && b.date_signature) return b.date_signature.localeCompare(a.date_signature);
+    if (a.date_signature) return -1;
+    if (b.date_signature) return 1;
+    return a.titre.localeCompare(b.titre, "fr");
+  });
+}
+
 export function DocCard({ d, assoc }: { d: AdminDoc; assoc?: string }) {
   const { go, peopleById } = useApp();
   const resp = d.responsable_id ? peopleById.get(d.responsable_id) : null;
@@ -76,7 +86,7 @@ export function AssociationsPage() {
   const filter = FILTERS.find((x) => x.v === f) ?? FILTERS[0];
   const ofAssoc = (q.data?.docs ?? []).filter((d) => (!current || d.association_id === current.id)
     && (!search || `${d.titre} ${d.categorie} ${d.notes ?? ""}`.toLowerCase().includes(search.toLowerCase())));
-  const list = sortDocs(ofAssoc.filter(filter.test));
+  const list = sortBySignature(ofAssoc.filter(filter.test));
 
   const byCat = useMemo(() => {
     const m = new Map<string, AdminDoc[]>();
