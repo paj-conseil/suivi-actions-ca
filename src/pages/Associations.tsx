@@ -233,7 +233,6 @@ async function uploadFiles(docId: string, files: File[], uploaderId: string) {
 
 export function AdminDocDetail({ id }: { id: string }) {
   const { me, go, back, toast, bump, peopleById, dataVersion } = useApp();
-  const [uploading, setUploading] = useState(false);
   const q = useQuery(async () => {
     const { data, error } = await supabase.from("admin_documents").select("*").eq("id", id).maybeSingle();
     if (error) throw error;
@@ -299,7 +298,7 @@ export function AdminDocDetail({ id }: { id: string }) {
 
         <div className="section-title">Pièces</div>
         <div className="card stack">
-          {files.length === 0 && <div className="muted small">Aucune pièce jointe.</div>}
+          {files.length === 0 && <div className="muted small">Aucune pièce jointe.{canEdit ? " Pour en ajouter, utilisez le crayon de modification en haut de la page." : ""}</div>}
           {files.map((f) => (
             <div key={f.id} className="row">
               <button className="doc" onClick={() => openFile(f, toast)}>
@@ -319,13 +318,6 @@ export function AdminDocDetail({ id }: { id: string }) {
               )}
             </div>
           ))}
-          {canEdit && (
-            <DropZone busy={uploading} label="Joindre le document signé" onFiles={async (fs) => {
-              setUploading(true);
-              try { await uploadFiles(d.id, fs, me.id); toast(fs.length > 1 ? `${fs.length} pièces ajoutées` : "Pièce ajoutée"); bump(); }
-              catch (err) { toast(errMsg(err)); } finally { setUploading(false); }
-            }} />
-          )}
         </div>
 
         {older.length > 0 && (
@@ -353,23 +345,31 @@ export function AdminDocForm({ id, assoc, renew }: { id?: string; assoc?: string
   const { me } = useApp();
   const srcId = id || renew;
   const q = useQuery(async () => {
-    const [d, a] = await Promise.all([
+    const [d, a, f] = await Promise.all([
       srcId ? supabase.from("admin_documents").select("*").eq("id", srcId).maybeSingle() : Promise.resolve({ data: null, error: null }),
       supabase.from("associations").select("*").order("ordre"),
+      id ? supabase.from("admin_document_files").select("*").eq("document_id", id).order("created_at") : Promise.resolve({ data: [], error: null }),
     ]);
-    return { d: d.data as AdminDoc | null, assocs: (a.data as Association[]) ?? [] };
+    return { d: d.data as AdminDoc | null, assocs: (a.data as Association[]) ?? [], files: (f.data ?? []) as AdminFile[] };
   }, [srcId]);
   const title = renew ? "Renouvellement" : id ? "Modifier le document" : "Nouveau document";
   if (!canAssocModifier(me)) return (<><Topbar title={title} backTo /><main className="content"><Empty>Le droit « Modification » de la section Associations est nécessaire.</Empty></main></>);
   if (q.loading && !q.data) return (<><Topbar title={title} backTo /><Spinner /></>);
   return <AdminDocFormInner key={srcId ?? "new"} title={title} mode={renew ? "renew" : id ? "edit" : "new"} src={q.data?.d ?? null}
-    assocs={q.data?.assocs ?? []} defaultAssoc={assoc} />;
+    assocs={q.data?.assocs ?? []} defaultAssoc={assoc} existingFiles={q.data?.files ?? []} />;
 }
 
-function AdminDocFormInner({ title, mode, src, assocs, defaultAssoc }: {
-  title: string; mode: "new" | "edit" | "renew"; src: AdminDoc | null; assocs: Association[]; defaultAssoc?: string;
+function AdminDocFormInner({ title, mode, src, assocs, defaultAssoc, existingFiles }: {
+  title: string; mode: "new" | "edit" | "renew"; src: AdminDoc | null; assocs: Association[]; defaultAssoc?: string; existingFiles: AdminFile[];
 }) {
   const { me, people, go, back, toast, bump } = useApp();
+  const [existing, setExisting] = useState<AdminFile[]>(existingFiles);
+  async function removeExisting(f: AdminFile) {
+    if (!window.confirm(`Supprimer « ${f.nom_fichier} » ?`)) return;
+    await supabase.storage.from(BUCKET).remove([f.storage_path]);
+    const { error } = await supabase.from("admin_document_files").delete().eq("id", f.id);
+    if (error) toast(errMsg(error)); else { setExisting((p) => p.filter((x) => x.id !== f.id)); toast("Pièce supprimée"); bump(); }
+  }
   const renewing = mode === "renew";
   const [associationId, setAssociationId] = useState(src?.association_id ?? defaultAssoc ?? assocs[0]?.id ?? "");
   const [categorie, setCategorie] = useState(src?.categorie ?? CATEGORIES[0]);
@@ -496,6 +496,16 @@ function AdminDocFormInner({ title, mode, src, assocs, defaultAssoc }: {
             <textarea className="textarea" value={notes} onChange={(e) => setNotes(e.target.value)} />
           </label>
           <div className="field"><span>Document signé <span className="hint">(facultatif)</span></span>
+            {existing.map((f) => (
+              <div key={f.id} className="doc" style={{ cursor: "default" }}>
+                <span className="ico"><IFile width={20} /></span>
+                <span style={{ minWidth: 0, flex: 1 }}><span className="name">{f.nom_fichier}</span>
+                  <span className="tiny muted" style={{ display: "block" }}>{fmtSize(f.taille)}{f.taille ? " · " : ""}déjà joint</span></span>
+                {canAssocSupprimer(me) && (
+                  <button type="button" className="icon-btn" aria-label={`Supprimer ${f.nom_fichier}`} onClick={() => removeExisting(f)}><ITrash width={20} /></button>
+                )}
+              </div>
+            ))}
             <DropZone label="Ajouter le document" onFiles={(fs) => setFiles((p) => [...p, ...fs])} />
             {files.map((f, i) => (
               <div key={i} className="doc" style={{ cursor: "default" }}>
