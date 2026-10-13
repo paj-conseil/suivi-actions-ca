@@ -9,9 +9,10 @@ import { ReunionsList, ReunionDetail, ReunionForm } from "./pages/Reunions";
 import { UsersPage } from "./pages/Users";
 import { ProfilePage } from "./pages/Profile";
 import { AssociationsPage, AdminDocDetail, AdminDocForm } from "./pages/Associations";
-import { canAssociations } from "./lib";
+import { canAssociations, canProjets } from "./lib";
+import { ProjetsList, ProjetDetail, ProjetForm, TacheDetail, TacheForm } from "./pages/Projets";
 import { Spinner } from "./components/ui";
-import { IBuilding, ICalendar, IHome, IList, IUser } from "./components/Icons";
+import { IBuilding, ICalendar, IFolder, IHome, IList, IUser } from "./components/Icons";
 
 export default function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
@@ -70,12 +71,18 @@ export default function App() {
 }
 
 function Shell() {
-  const { route, go, me } = useApp();
+  const { route, go, me, instances } = useApp();
+  // Un compte sans accès aux conseils (par exemple « Projets » seul) n'a pas d'accueil ni d'actions
+  const conseils = instances.length > 0;
+  const projetsMatch = ["projets", "projet", "projet-form", "tache", "tache-form"];
   const tabs = [
-    { v: "home", label: "Accueil", icon: <IHome />, match: ["home"] },
-    { v: "actions", label: "Actions", icon: <IList />, match: ["actions", "action", "action-form"] },
-    { v: "reunions", label: "Réunions", icon: <ICalendar />, match: ["reunions", "reunion", "reunion-form"] },
+    ...(conseils ? [
+      { v: "home", label: "Accueil", icon: <IHome />, match: ["home"] },
+      { v: "actions", label: "Actions", icon: <IList />, match: ["actions", "action", "action-form"] },
+      { v: "reunions", label: "Réunions", icon: <ICalendar />, match: ["reunions", "reunion", "reunion-form"] },
+    ] : []),
     ...(canAssociations(me) ? [{ v: "associations", label: "Associations", icon: <IBuilding />, match: ["associations", "doc", "doc-form"] }] : []),
+    ...(canProjets(me) ? [{ v: "projets", label: "Projets", icon: <IFolder />, match: conseils ? projetsMatch : [...projetsMatch, "home"] }] : []),
     { v: "profile", label: me.is_admin ? "Réglages" : "Profil", icon: <IUser />, match: ["profile", "users"] },
   ];
 
@@ -90,9 +97,18 @@ function Shell() {
     case "associations": page = <AssociationsPage />; break;
     case "doc": page = <AdminDocDetail id={route.id!} />; break;
     case "doc-form": page = <AdminDocForm id={route.id} assoc={route.assoc} renew={route.renew} />; break;
+    case "projets": page = <ProjetsList />; break;
+    case "projet": page = <ProjetDetail id={route.id!} />; break;
+    case "projet-form": page = <ProjetForm id={route.id} />; break;
+    case "tache": page = <TacheDetail id={route.id!} />; break;
+    case "tache-form": page = <TacheForm id={route.id} projet={route.projet} theme={route.theme} parent={route.parent} />; break;
     case "users": page = me.is_admin ? <UsersPage /> : <Dashboard />; break;
     case "profile": page = <ProfilePage />; break;
-    default: page = <Dashboard />;
+    default:
+      page = conseils ? <Dashboard />
+        : canProjets(me) ? <ProjetsList />
+          : canAssociations(me) ? <AssociationsPage />
+            : <ProfilePage />;
   }
 
   return (

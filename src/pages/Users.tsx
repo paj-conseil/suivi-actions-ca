@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from "react";
-import { adminUsers, errMsg, fullName, type Profile, assocNiveau, canAssociations } from "../lib";
+import { useEffect, useState, type FormEvent } from "react";
+import { adminUsers, errMsg, fullName, supabase, type Profile, type Projet, assocNiveau, canAssociations } from "../lib";
 import { useApp } from "../store";
 import { Avatar, ConfirmButton, ErrorBox, Sheet, Topbar } from "../components/ui";
 import { IKey, IPlus } from "../components/Icons";
@@ -11,7 +11,8 @@ function Roles({ p }: { p: Profile }) {
       {p.is_bureau && <span className="badge instance-bureau">Conseil scolaire</span>}
       {p.is_ca && <span className="badge instance-ca">CA</span>}
       {assocNiveau(p) && <span className="badge role">{assocNiveau(p)}</span>}
-      {!p.is_admin && !p.is_bureau && !p.is_ca && !canAssociations(p) && <span className="badge">Aucun accès</span>}
+      {p.is_projets && !p.is_admin && <span className="badge role">Projets</span>}
+      {!p.is_admin && !p.is_bureau && !p.is_ca && !canAssociations(p) && !p.is_projets && <span className="badge">Aucun accès</span>}
       {!p.actif && <span className="badge s-retard">Désactivé</span>}
       {p.actif && p.must_change_password && <span className="badge s-proche">1re connexion à faire</span>}
     </span>
@@ -53,6 +54,7 @@ export function UsersPage() {
             <li><strong>Conseil scolaire</strong> : consulte la section Conseil scolaire des réunions et ses actions.</li>
             <li><strong>Conseil d'administration</strong> : consulte la section CA des réunions et ses actions.</li>
             <li><strong>Associations</strong> : trois niveaux cumulables, Lecture, Modification et Suppression des documents administratifs des deux associations.</li>
+            <li><strong>Projets</strong> : accès aux seuls projets dont la personne est membre. Peut être le seul accès d'un compte.</li>
           </ul>
           <p className="muted tiny" style={{ marginBottom: 0 }}>Chaque responsable peut mettre à jour le statut et l'avancement de ses propres actions.</p>
         </div>
@@ -85,6 +87,34 @@ function UserSheet({ user, onClose, onSaved, onCreds }: {
   const [aSuppr, setASuppr] = useState(user?.assoc_suppression ?? false);
   const assocRights = { is_associations: aLect || aModif || aSuppr, assoc_modification: aModif, assoc_suppression: aSuppr };
   const [actif, setActif] = useState(user?.actif ?? true);
+  const [isProjets, setIsProjets] = useState(user?.is_projets ?? false);
+  const [projets, setProjets] = useState<Projet[]>([]);
+  const [mesProjetsInit, setMesProjetsInit] = useState<Set<string>>(new Set());
+  const [mesProjets, setMesProjets] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("projets").select("*").order("nom");
+      setProjets((data ?? []) as Projet[]);
+      if (user) {
+        const { data: m } = await supabase.from("projet_membres").select("projet_id").eq("profile_id", user.id);
+        const s = new Set(((m ?? []) as { projet_id: string }[]).map((x) => x.projet_id));
+        setMesProjetsInit(s); setMesProjets(new Set(s));
+      }
+    })();
+  }, [user]);
+
+  async function saveProjets(uid: string) {
+    const add = [...mesProjets].filter((x) => !mesProjetsInit.has(x));
+    const del = [...mesProjetsInit].filter((x) => !mesProjets.has(x));
+    if (add.length) {
+      const { error } = await supabase.from("projet_membres").insert(add.map((projet_id) => ({ projet_id, profile_id: uid })));
+      if (error) throw error;
+    }
+    if (del.length) {
+      const { error } = await supabase.from("projet_membres").delete().eq("profile_id", uid).in("projet_id", del);
+      if (error) throw error;
+    }
+  }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const self = user?.id === me.id;
@@ -95,16 +125,18 @@ function UserSheet({ user, onClose, onSaved, onCreds }: {
     try {
       if (!user) {
         const res = await adminUsers<{ id: string; password: string }>({
-          action: "create", prenom, nom, email, fonction, is_admin: isAdmin, is_bureau: isBureau, is_ca: isCa, ...assocRights,
+          action: "create", prenom, nom, email, fonction, is_admin: isAdmin, is_bureau: isBureau, is_ca: isCa, ...assocRights, is_projets: isProjets,
         });
+        if (isProjets) await saveProjets(res.id);
         await refreshPeople();
         onCreds({ prenom, email: email.trim().toLowerCase(), password: res.password, reset: false });
       } else {
         await adminUsers({
           action: "update", id: user.id, prenom, nom, fonction,
           email: email.trim().toLowerCase() !== user.email ? email : undefined,
-          is_admin: isAdmin, is_bureau: isBureau, is_ca: isCa, ...assocRights, actif,
+          is_admin: isAdmin, is_bureau: isBureau, is_ca: isCa, ...assocRights, is_projets: isProjets, actif,
         });
+        await saveProjets(user.id);
         if (self) await refreshMe();
         toast("Membre mis à jour");
         await onSaved();
@@ -155,6 +187,21 @@ function UserSheet({ user, onClose, onSaved, onCreds }: {
               <label className="check"><input type="checkbox" checked={isAdmin || aSuppr} disabled={isAdmin}
                 onChange={(e) => { setASuppr(e.target.checked); if (e.target.checked) setALect(true); }} />
                 <span><span className="t">Suppression</span><br /><span className="d">Supprimer des documents et des pièces jointes</span></span></label>
+            </div>
+            <div className="check-group">
+              <div className="cg-title">Section Projets<span className="d">Chaque personne ne voit que les projets cochés{isAdmin ? " · Admin : voit tous les projets" : ""}</span></div>
+              <label className="check"><input type="checkbox" checked={isAdmin || isProjets} disabled={isAdmin}
+                onChange={(e) => { setIsProjets(e.target.checked); if (!e.target.checked) setMesProjets(new Set()); }} />
+                <span><span className="t">Accès aux projets</span><br /><span className="d">Ouvre l'onglet Projets</span></span></label>
+              {(isProjets || isAdmin) && (projets.length === 0
+                ? <div className="tiny muted">Aucun projet créé pour l'instant.</div>
+                : projets.map((pj) => (
+                  <label key={pj.id} className="check">
+                    <input type="checkbox" checked={mesProjets.has(pj.id)}
+                      onChange={(e) => setMesProjets((s) => { const n = new Set(s); e.target.checked ? n.add(pj.id) : n.delete(pj.id); return n; })} />
+                    <span><span className="t">{pj.nom}</span><br /><span className="d">Membre du projet</span></span>
+                  </label>
+                )))}
             </div>
             {user && !self && (
               <label className="check"><input type="checkbox" checked={actif} onChange={(e) => setActif(e.target.checked)} />

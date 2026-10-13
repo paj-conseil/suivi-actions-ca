@@ -23,3 +23,7 @@ export const ICheck = (p: P) => (<svg {...base} strokeWidth={2.6} {...p}><path d
 export const IMail = (p: P) => (<svg {...base} {...p}><rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="m4 7 8 6 8-6" /></svg>);
 export const IKey = (p: P) => (<svg {...base} {...p}><circle cx="8" cy="15" r="4" /><path d="m11 12 9-9M17 6l3 3M14.5 8.5l2 2" /></svg>);
 export const IBuilding = (p: P) => (<svg {...base} {...p}><path d="M3 21h18M5 21V10l7-5 7 5v11" /><path d="M9 21v-5h6v5M9 11h.01M15 11h.01" /></svg>);
+export const IFolder = (p: P) => (<svg {...base} {...p}><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" /></svg>);
+export const IMinusBox = (p: P) => (<svg {...base} {...p}><rect x="4" y="4" width="16" height="16" rx="4" /><path d="M8.5 12h7" /></svg>);
+export const IPlusBox = (p: P) => (<svg {...base} {...p}><rect x="4" y="4" width="16" height="16" rx="4" /><path d="M12 8.5v7M8.5 12h7" /></svg>);
+export const IComment = (p: P) => (<svg {...base} {...p}><path d="M5 5h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-8l-4.5 3.5V17H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" /></svg>);

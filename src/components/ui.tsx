@@ -156,3 +156,23 @@ export function DropZone({ onFiles, busy, label = "Joindre un document" }: {
     </div>
   );
 }
+
+const URL_RE = /((?:https?:\/\/|www\.)[^\s<>"']+[^\s<>"'.,;:!?)\]])/gi;
+
+/** Affiche un texte en rendant cliquables les adresses web (https://… ou www.…) */
+export function Linkify({ text }: { text: string }) {
+  const parts = text.split(URL_RE);
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (i % 2 === 0) return part;
+        const href = /^https?:\/\//i.test(part) ? part : `https://${part}`;
+        let label = part.replace(/^https?:\/\//i, "");
+        if (label.length > 48) label = label.slice(0, 45) + "…";
+        return (
+          <a key={i} className="ext-link" href={href} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>{label}</a>
+        );
+      })}
+    </>
+  );
+}

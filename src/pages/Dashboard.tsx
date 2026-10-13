@@ -1,4 +1,4 @@
-import { supabase, type Action, type AdminDoc, type Association, type Reunion, canAssociations, etatDoc, sante, isClosed, fmtDate, instanceLabel, SANTE_LABEL, type Sante } from "../lib";
+import { supabase, type Tache, type Projet, canProjets, echeanceText, type Action, type AdminDoc, type Association, type Reunion, canAssociations, etatDoc, sante, isClosed, fmtDate, instanceLabel, SANTE_LABEL, type Sante } from "../lib";
 import { useApp, useQuery } from "../store";
 import { ActionCard, Empty, ErrorBox, InstanceBadge, Logo, Spinner, Topbar } from "../components/ui";
 import { IChevron, ICheck } from "../components/Icons";
@@ -19,15 +19,18 @@ export function sortActions(list: Action[]): Action[] {
 export function Dashboard() {
   const { me, go, instances, dataVersion } = useApp();
   const q = useQuery(async () => {
-    const [a, r, d, as] = await Promise.all([
+    const [a, r, d, as, pt, pj] = await Promise.all([
       supabase.from("actions").select("*"),
       supabase.from("reunions").select("*").order("date_reunion", { ascending: false }).limit(20),
       canAssociations(me) ? supabase.from("admin_documents").select("*").eq("archive", false) : Promise.resolve({ data: [], error: null }),
       canAssociations(me) ? supabase.from("associations").select("*") : Promise.resolve({ data: [], error: null }),
+      canProjets(me) ? supabase.from("projet_taches").select("*").eq("responsable_id", me.id).not("statut", "in", "(terminee,abandonnee)") : Promise.resolve({ data: [], error: null }),
+      canProjets(me) ? supabase.from("projets").select("id, nom") : Promise.resolve({ data: [], error: null }),
     ]);
     if (a.error) throw a.error;
     if (r.error) throw r.error;
-    return { actions: a.data as Action[], reunions: r.data as Reunion[], docs: (d.data ?? []) as AdminDoc[], assocs: (as.data ?? []) as Association[] };
+    return { actions: a.data as Action[], reunions: r.data as Reunion[], docs: (d.data ?? []) as AdminDoc[], assocs: (as.data ?? []) as Association[],
+      mesTaches: (pt.data ?? []) as Tache[], projets: (pj.data ?? []) as Pick<Projet, "id" | "nom">[] };
   }, [dataVersion]);
 
   const actions = q.data?.actions ?? [];
@@ -94,6 +97,27 @@ export function Dashboard() {
                 </>
               );
             })()}
+
+            {canProjets(me) && (q.data?.mesTaches.length ?? 0) > 0 && (
+              <>
+                <div className="section-title">Mes tâches de projet</div>
+                <div className="stack">
+                  {sortActions(q.data!.mesTaches as unknown as Action[]).slice(0, 5).map((a) => {
+                    const t = a as unknown as Tache;
+                    return (
+                      <button key={t.id} className={`action-card s-${sante(t)}`} onClick={() => go({ v: "tache", id: t.id })}>
+                        <div className="title">{t.titre}</div>
+                        <div className="meta">
+                          <span className="badge">{q.data!.projets.find((x) => x.id === t.projet_id)?.nom ?? "Projet"}</span>
+                          <span>{echeanceText(t)}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                  {q.data!.mesTaches.length > 5 && <button className="btn block" onClick={() => go({ v: "projets" })}>Voir mes {q.data!.mesTaches.length} tâches dans les projets</button>}
+                </div>
+              </>
+            )}
 
             <div className="section-title">Dernières réunions</div>
             <div className="stack">

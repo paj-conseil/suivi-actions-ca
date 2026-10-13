@@ -26,6 +26,7 @@ export interface Profile {
   is_associations: boolean;
   assoc_modification: boolean;
   assoc_suppression: boolean;
+  is_projets: boolean;
   must_change_password: boolean;
   actif: boolean;
 }
@@ -342,3 +343,61 @@ export const LISTE_TYPE: { categorie: string; titre: string }[] = [
   { categorie: "Finances", titre: "Budget prévisionnel voté" },
   { categorie: "Données personnelles", titre: "Registre des traitements RGPD" },
 ];
+
+// ---------- Projets ----------
+export type ProjetStatut = "preparation" | "en_cours" | "en_pause" | "termine" | "abandonne";
+export const PROJET_STATUTS: { value: ProjetStatut; label: string; cls: string }[] = [
+  { value: "preparation", label: "En préparation", cls: "s-a_faire" },
+  { value: "en_cours", label: "En cours", cls: "s-en_cours" },
+  { value: "en_pause", label: "En pause", cls: "s-proche" },
+  { value: "termine", label: "Terminé", cls: "s-terminee" },
+  { value: "abandonne", label: "Abandonné", cls: "s-abandonnee" },
+];
+export const projetStatut = (s: ProjetStatut) => PROJET_STATUTS.find((x) => x.value === s) ?? PROJET_STATUTS[1];
+
+export interface Projet {
+  id: string;
+  nom: string;
+  objectif: string | null;
+  statut: ProjetStatut;
+  date_debut: string | null;
+  date_fin: string | null;
+  created_at: string;
+  updated_at: string;
+}
+export interface ProjetMembre { projet_id: string; profile_id: string }
+export interface Theme { id: string; projet_id: string; nom: string; ordre: number }
+export interface Tache {
+  id: string;
+  projet_id: string;
+  theme_id: string;
+  parent_id: string | null;
+  titre: string;
+  description: string | null;
+  responsable_id: string | null;
+  echeance: string | null;
+  statut: Statut;
+  ordre: number;
+  created_at: string;
+  updated_at: string;
+  closed_at: string | null;
+}
+export interface Commentaire { id: string; tache_id: string; auteur_id: string | null; texte: string; created_at: string }
+
+export const canProjets = (p: Pick<Profile, "is_admin" | "is_projets">) => p.is_admin || p.is_projets;
+
+/** Indicateurs d'un ensemble de tâches et sous-tâches */
+export function statsTaches(list: Tache[]) {
+  const ouvertes = list.filter((t) => !isClosed(t.statut));
+  const terminees = list.filter((t) => t.statut === "terminee").length;
+  const comptees = list.filter((t) => t.statut !== "abandonnee").length;
+  return {
+    total: list.length,
+    ouvertes: ouvertes.length,
+    fermees: list.length - ouvertes.length,
+    retard: ouvertes.filter((t) => sante(t) === "retard").length,
+    bloquees: ouvertes.filter((t) => t.statut === "bloquee").length,
+    proches: ouvertes.filter((t) => sante(t) === "proche").length,
+    avancement: comptees ? Math.round((terminees / comptees) * 100) : 0,
+  };
+}
