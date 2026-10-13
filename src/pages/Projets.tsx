@@ -302,6 +302,7 @@ export function ProjetDetail({ id }: { id: string }) {
                 <button className="icon-btn" aria-label={`Modifier le thème ${th.nom}`} onClick={() => setThemeSheet(th)}><IEdit width={20} /></button>
               </div>
               <div className="theme-progress"><Progress value={s.avancement} /></div>
+              {th.description && !collapsed && <div className="theme-desc"><Linkify text={th.description} /></div>}
               {!collapsed && (
                 <div className="theme-body">
                   {shown.length === 0 && <div className="muted small" style={{ padding: "6px 4px" }}>Aucune tâche dans ce thème.</div>}
@@ -338,6 +339,7 @@ function ThemeSheet({ projetId, theme, ordre, nbTaches, onClose, onDone }: {
   projetId: string; theme: Theme | null; ordre: number; nbTaches: number; onClose: () => void; onDone: (msg: string) => void;
 }) {
   const [nom, setNom] = useState(theme?.nom ?? "");
+  const [description, setDescription] = useState(theme?.description ?? "");
   const [error, setError] = useState<string | null>(null);
   return (
     <Sheet title={theme ? "Modifier le thème" : "Nouveau thème"} onClose={onClose}>
@@ -345,12 +347,16 @@ function ThemeSheet({ projetId, theme, ordre, nbTaches, onClose, onDone }: {
         e.preventDefault();
         if (!nom.trim()) return;
         const { error } = theme
-          ? await supabase.from("projet_themes").update({ nom: nom.trim() }).eq("id", theme.id)
-          : await supabase.from("projet_themes").insert({ projet_id: projetId, nom: nom.trim(), ordre });
-        if (error) setError(errMsg(error)); else onDone(theme ? "Thème renommé" : "Thème créé");
+          ? await supabase.from("projet_themes").update({ nom: nom.trim(), description: description.trim() || null }).eq("id", theme.id)
+          : await supabase.from("projet_themes").insert({ projet_id: projetId, nom: nom.trim(), description: description.trim() || null, ordre });
+        if (error) setError(errMsg(error)); else onDone(theme ? "Thème mis à jour" : "Thème créé");
       }}>
         <label className="field"><span>Nom du thème</span>
           <input className="input" value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Ex. Travaux, Communication, Financement" autoFocus required />
+        </label>
+        <label className="field"><span>Description <span className="hint">(facultatif)</span></span>
+          <textarea className="textarea" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Périmètre du thème, attendus, liens utiles (https://…)" />
+          <span className="hint">Les liens collés ici deviendront cliquables.</span>
         </label>
         <ErrorBox msg={error} />
         <button className="btn primary block">{theme ? "Enregistrer" : "Créer le thème"}</button>

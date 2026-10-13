@@ -483,3 +483,4 @@ h1, h2, h3, .hello, .brand h1, .detail-head h2, .group-head .name, .reunion-sect
 
 @media (max-width: 420px) { .tab { font-size: 10.5px; } .tab svg { width: 22px; height: 22px; } }
 .ext-link { color: var(--red); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; word-break: break-all; }
+.theme-desc { padding: 0 16px 12px 44px; font-size: 14px; color: var(--muted); line-height: 1.5; white-space: pre-wrap; }

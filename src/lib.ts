@@ -366,7 +366,7 @@ export interface Projet {
   updated_at: string;
 }
 export interface ProjetMembre { projet_id: string; profile_id: string }
-export interface Theme { id: string; projet_id: string; nom: string; ordre: number }
+export interface Theme { id: string; projet_id: string; nom: string; description: string | null; ordre: number }
 export interface Tache {
   id: string;
   projet_id: string;
