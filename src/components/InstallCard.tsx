@@ -31,7 +31,7 @@ function AppPreview() {
   );
 }
 
-export function InstallCard() {
+export function InstallCard({ compact = false }: { compact?: boolean }) {
   const { toast } = useApp();
   const [dev, setDev] = useState(detectDevice);
   const [canPrompt, setCanPrompt] = useState(canPromptInstall());
@@ -60,7 +60,7 @@ export function InstallCard() {
   };
 
   return (
-    <div className="card install-card stack">
+    <div className={`${compact ? "" : "card "}install-card stack`}>
       <div className="row" style={{ gap: 12 }}>
         <AppPreview />
         <div className="small">
@@ -121,7 +121,7 @@ export function InstallCard() {
         </div>
       )}
 
-      <button className="btn ghost block small" onClick={copyLink}>Copier le lien de l'application</button>
+      {!compact && <button className="btn ghost block small" onClick={copyLink}>Copier le lien de l'application</button>}
     </div>
   );
 }

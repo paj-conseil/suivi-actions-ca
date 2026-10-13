@@ -27,5 +27,11 @@
   "id": "./",
   "scope": "./",
   "description": "Application de gestion du Groupe Scolaire Carlo Acutis : conseils, actions, associations et projets",
-  "orientation": "portrait"
+  "orientation": "portrait",
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "https://paj-conseil.github.io/suivi-actions-ca/manifest.webmanifest"
+    }
+  ]
 }

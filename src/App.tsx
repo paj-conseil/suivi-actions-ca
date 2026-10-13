@@ -12,6 +12,7 @@ import { AssociationsPage, AdminDocDetail, AdminDocForm } from "./pages/Associat
 import { canAssociations, canProjets } from "./lib";
 import { ProjetsList, ProjetDetail, ProjetForm, TacheDetail, TacheForm } from "./pages/Projets";
 import { PropositionsPage, usePropositionsEnAttente } from "./pages/Propositions";
+import { InstallPrompt } from "./components/InstallPrompt";
 import { Spinner } from "./components/ui";
 import { IBuilding, ICalendar, IFolder, IHome, IList, IUser } from "./components/Icons";
 
@@ -117,6 +118,7 @@ function Shell() {
   return (
     <div className="app">
       {page}
+      <InstallPrompt />
       <nav className="tabbar" aria-label="Navigation principale">
         {tabs.map((t) => (
           <button key={t.v} className={`tab ${t.match.includes(route.v) ? "active" : ""}`}

@@ -60,3 +60,37 @@ export function detectDevice(): Device {
 
   return { os, browser, model, installed };
 }
+
+// ---------- Proposition automatique à l'ouverture ----------
+const KEY_DONE = "gsca:install:done";
+const KEY_LATER = "gsca:install:later";
+const LATER_DAYS = 7;
+
+function get(k: string) { try { return localStorage.getItem(k); } catch { return null; } }
+function set(k: string, v: string) { try { localStorage.setItem(k, v); } catch { /* stockage indisponible */ } }
+
+window.addEventListener("appinstalled", () => set(KEY_DONE, "1"));
+
+export const markInstalled = () => set(KEY_DONE, "1");
+export const remindLater = () => set(KEY_LATER, String(Date.now()));
+
+/** Vrai si l'application est déjà installée sur ce téléphone (quand le navigateur sait le dire) */
+async function alreadyInstalled(): Promise<boolean> {
+  const n = navigator as Navigator & { getInstalledRelatedApps?: () => Promise<unknown[]> };
+  if (typeof n.getInstalledRelatedApps !== "function") return false;
+  try { return (await n.getInstalledRelatedApps()).length > 0; } catch { return false; }
+}
+
+/** Faut-il proposer l'installation maintenant ? Uniquement sur smartphone, hors application installée, si l'utilisateur ne l'a pas déjà fait */
+export async function shouldProposeInstall(): Promise<boolean> {
+  const d = detectDevice();
+  if (d.os === "desktop" || d.installed) {
+    if (d.installed) set(KEY_DONE, "1");
+    return false;
+  }
+  if (get(KEY_DONE)) return false;
+  const later = Number(get(KEY_LATER) ?? 0);
+  if (later && Date.now() - later < LATER_DAYS * 86400000) return false;
+  if (await alreadyInstalled()) { set(KEY_DONE, "1"); return false; }
+  return true;
+}
