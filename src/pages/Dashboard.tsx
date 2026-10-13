@@ -3,6 +3,7 @@ import { useApp, useQuery } from "../store";
 import { ActionCard, Empty, ErrorBox, InstanceBadge, Logo, Spinner, Topbar } from "../components/ui";
 import { IChevron, ICheck } from "../components/Icons";
 import { DocCard, sortDocs } from "./Associations";
+import { usePropositionsEnAttente } from "./Propositions";
 
 export function sortActions(list: Action[]): Action[] {
   const rank: Record<Sante, number> = { retard: 0, bloquee: 1, proche: 2, en_cours: 3, a_faire: 4, terminee: 5, abandonnee: 6 };
@@ -18,6 +19,7 @@ export function sortActions(list: Action[]): Action[] {
 
 export function Dashboard() {
   const { me, go, instances, dataVersion } = useApp();
+  const enAttente = usePropositionsEnAttente();
   const q = useQuery(async () => {
     const [a, r, d, as, pt, pj] = await Promise.all([
       supabase.from("actions").select("*"),
@@ -55,6 +57,11 @@ export function Dashboard() {
           {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
         </p>
         <ErrorBox msg={q.error} />
+        {enAttente > 0 && (
+          <button className="alert info small" style={{ width: "100%", textAlign: "left", border: 0, cursor: "pointer", marginBottom: 10 }} onClick={() => go({ v: "propositions" })}>
+            <strong>{enAttente} proposition{enAttente > 1 ? "s" : ""} de membre</strong> en attente de votre décision pour les projets. Toucher pour traiter.
+          </button>
+        )}
         {q.loading && !q.data ? <Spinner /> : (
           <>
             <div className="kpis">

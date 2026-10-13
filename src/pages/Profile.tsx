@@ -4,11 +4,13 @@ import { useApp } from "../store";
 import { Avatar, Topbar } from "../components/ui";
 import { ChangePassword } from "./Auth";
 import { InstallCard } from "../components/InstallCard";
+import { PropositionsLink, usePropositionsEnAttente } from "./Propositions";
 import { IChevron, IUsers } from "../components/Icons";
 
 export function ProfilePage() {
   const { me, toast, go } = useApp();
   const [changing, setChanging] = useState(false);
+  const enAttente = usePropositionsEnAttente();
   return (
     <>
       <Topbar title={me.is_admin ? "Réglages" : "Profil"} />
@@ -45,6 +47,8 @@ export function ProfilePage() {
               </div>
               <IChevron width={20} className="muted" />
             </button>
+            <div style={{ height: 8 }} />
+            <PropositionsLink count={enAttente} />
           </>
         )}
 

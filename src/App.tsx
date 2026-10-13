@@ -11,6 +11,7 @@ import { ProfilePage } from "./pages/Profile";
 import { AssociationsPage, AdminDocDetail, AdminDocForm } from "./pages/Associations";
 import { canAssociations, canProjets } from "./lib";
 import { ProjetsList, ProjetDetail, ProjetForm, TacheDetail, TacheForm } from "./pages/Projets";
+import { PropositionsPage, usePropositionsEnAttente } from "./pages/Propositions";
 import { Spinner } from "./components/ui";
 import { IBuilding, ICalendar, IFolder, IHome, IList, IUser } from "./components/Icons";
 
@@ -72,6 +73,7 @@ export default function App() {
 
 function Shell() {
   const { route, go, me, instances } = useApp();
+  const enAttente = usePropositionsEnAttente();
   // Un compte sans accès aux conseils (par exemple « Projets » seul) n'a pas d'accueil ni d'actions
   const conseils = instances.length > 0;
   const projetsMatch = ["projets", "projet", "projet-form", "tache", "tache-form"];
@@ -83,7 +85,7 @@ function Shell() {
     ] : []),
     ...(canAssociations(me) ? [{ v: "associations", label: "Associations", icon: <IBuilding />, match: ["associations", "doc", "doc-form"] }] : []),
     ...(canProjets(me) ? [{ v: "projets", label: "Projets", icon: <IFolder />, match: conseils ? projetsMatch : [...projetsMatch, "home"] }] : []),
-    { v: "profile", label: me.is_admin ? "Réglages" : "Profil", icon: <IUser />, match: ["profile", "users"] },
+    { v: "profile", label: me.is_admin ? "Réglages" : "Profil", icon: <IUser />, match: ["profile", "users", "propositions"], badge: enAttente },
   ];
 
   let page;
@@ -102,6 +104,7 @@ function Shell() {
     case "projet-form": page = <ProjetForm id={route.id} />; break;
     case "tache": page = <TacheDetail id={route.id!} />; break;
     case "tache-form": page = <TacheForm id={route.id} projet={route.projet} theme={route.theme} parent={route.parent} />; break;
+    case "propositions": page = <PropositionsPage />; break;
     case "users": page = me.is_admin ? <UsersPage /> : <Dashboard />; break;
     case "profile": page = <ProfilePage />; break;
     default:
@@ -119,7 +122,7 @@ function Shell() {
           <button key={t.v} className={`tab ${t.match.includes(route.v) ? "active" : ""}`}
             aria-current={t.match.includes(route.v) ? "page" : undefined}
             onClick={() => go({ v: t.v })}>
-            {t.icon}{t.label}
+            <span className="tab-ico">{t.icon}{"badge" in t && (t as { badge?: number }).badge ? <span className="tab-badge">{(t as { badge?: number }).badge}</span> : null}</span>{t.label}
           </button>
         ))}
       </nav>

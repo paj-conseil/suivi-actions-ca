@@ -19,7 +19,7 @@ function Roles({ p }: { p: Profile }) {
   );
 }
 
-type Creds = { prenom: string; email: string; password: string; reset: boolean };
+export type Creds = { prenom: string; email: string; password: string; reset: boolean };
 
 export function UsersPage() {
   const { people, refreshPeople, me } = useApp();
@@ -240,7 +240,7 @@ function UserSheet({ user, onClose, onSaved, onCreds }: {
   );
 }
 
-function CredsSheet({ c, onClose }: { c: Creds; onClose: () => void }) {
+export function CredsSheet({ c, onClose }: { c: Creds; onClose: () => void }) {
   const { toast } = useApp();
   const url = window.location.origin + window.location.pathname;
   const message = `Bonjour ${c.prenom},\n\nVotre accès à l'application de suivi des actions du conseil d'administration est ${c.reset ? "réinitialisé" : "prêt"}.\n\nAdresse : ${url}\nIdentifiant : ${c.email}\nMot de passe provisoire : ${c.password}\n\nVous devrez choisir votre propre mot de passe à la connexion.\nAstuce : ajoutez l'application à l'écran d'accueil de votre téléphone.`;

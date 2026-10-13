@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import {
-  supabase, type Commentaire, type Profile, type Projet, type ProjetMembre, type ProjetStatut, type Statut, type Tache, type Theme,
+  supabase, type Commentaire, type Proposition, type Profile, type Projet, type ProjetMembre, type ProjetStatut, type Statut, type Tache, type Theme,
   PROJET_STATUTS, STATUTS, adminUsers, canCreerProjet, canProjets, isGestionnaire, echeanceText, errMsg, fmtDate, fmtDateTime, fullName, isClosed, projetStatut,
   sante, statsTaches,
 } from "../lib";
@@ -651,6 +651,8 @@ export function ProjetForm({ id }: { id?: string }) {
   return <ProjetFormInner key={id ?? "new"} title={title} initial={q.data?.p ?? null} membresInit={(q.data?.membres ?? []).map((m) => m.profile_id)} />;
 }
 
+type PropoDraft = { prenom: string; nom: string; email: string; fonction: string; message: string };
+
 function ProjetFormInner({ title, initial, membresInit }: { title: string; initial: Projet | null; membresInit: string[] }) {
   const { me, people, go, back, toast, bump, refreshPeople } = useApp();
   const [nom, setNom] = useState(initial?.nom ?? "");
@@ -661,12 +663,43 @@ function ProjetFormInner({ title, initial, membresInit }: { title: string; initi
   const [membres, setMembres] = useState<Set<string>>(new Set(initial ? membresInit : [me.id]));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Un admin peut ajouter n'importe qui (le droit Projets est alors donné) ; un créateur choisit parmi les personnes qui ont déjà ce droit
-  const actifs = people.filter((p) => p.actif && (me.is_admin || canProjets(p) || membresInit.includes(p.id)));
+  const [filtre, setFiltre] = useState("");
+  // Propositions de nouvelles personnes (sans compte) : soumises à un admin
+  const [propos, setPropos] = useState<Proposition[]>([]);
+  const [drafts, setDrafts] = useState<PropoDraft[]>([]);
+  const [draft, setDraft] = useState<PropoDraft | null>(null);
+  const [draftErr, setDraftErr] = useState<string | null>(null);
+  useEffect(() => {
+    if (!initial) return;
+    supabase.from("projet_propositions").select("*").eq("projet_id", initial.id).order("created_at", { ascending: false })
+      .then(({ data }) => setPropos((data ?? []) as Proposition[]));
+  }, [initial]);
+
+  const actifs = people.filter((p) => p.actif);
+  const visibles = actifs.filter((p) => !filtre || `${p.prenom} ${p.nom} ${p.fonction ?? ""}`.toLowerCase().includes(filtre.toLowerCase()));
+
+  function addDraft() {
+    if (!draft) return;
+    const email = draft.email.trim().toLowerCase();
+    if (!draft.prenom.trim() || !draft.nom.trim() || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { setDraftErr("Prénom, nom et une adresse email valide sont nécessaires."); return; }
+    const existe = people.find((p) => p.email.toLowerCase() === email);
+    if (existe) {
+      setMembres((s) => new Set(s).add(existe.id));
+      setDraft(null); setDraftErr(null);
+      toast(`${fullName(existe)} a déjà un compte : cochée dans la liste`);
+      return;
+    }
+    if (drafts.some((d) => d.email.toLowerCase() === email) || propos.some((x) => x.email.toLowerCase() === email && x.statut === "en_attente")) {
+      setDraftErr("Cette personne est déjà proposée."); return;
+    }
+    setDrafts((d) => [...d, { ...draft, email }]);
+    setDraft(null); setDraftErr(null);
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!nom.trim()) { setError("Le nom est obligatoire."); return; }
+    if (draft && (draft.prenom || draft.nom || draft.email)) { setError("Terminez ou annulez la proposition de nouvelle personne en cours."); return; }
     setBusy(true); setError(null);
     const row = { nom: nom.trim(), objectif: objectif.trim() || null, statut, date_debut: debut || null, date_fin: fin || null };
     try {
@@ -680,7 +713,7 @@ function ProjetFormInner({ title, initial, membresInit }: { title: string; initi
         if (error) throw error;
         pid = data.id;
       }
-      // Membres : ajouts et retraits
+      // Membres : ajouts et retraits (l'ajout ouvre automatiquement l'onglet Projets à la personne)
       const before = new Set(membresInit);
       const toAdd = [...membres].filter((x) => !before.has(x));
       const toRemove = [...before].filter((x) => !membres.has(x));
@@ -692,11 +725,18 @@ function ProjetFormInner({ title, initial, membresInit }: { title: string; initi
         const { error } = await supabase.from("projet_membres").delete().eq("projet_id", pid).in("profile_id", toRemove);
         if (error) throw error;
       }
-      // Donner le droit Projets aux membres qui ne l'ont pas encore
-      const sansDroit = me.is_admin ? toAdd.map((x) => people.find((p) => p.id === x)).filter((p) => p && !canProjets(p)) as Profile[] : [];
-      for (const p of sansDroit) await adminUsers({ action: "update", id: p.id, is_projets: true });
-      if (sansDroit.length) await refreshPeople();
-      toast(initial ? "Projet mis à jour" : "Projet créé"); bump();
+      if (drafts.length) {
+        const { error } = await supabase.from("projet_propositions").insert(drafts.map((d) => ({
+          projet_id: pid, prenom: d.prenom.trim(), nom: d.nom.trim(), email: d.email, fonction: d.fonction.trim() || null,
+          message: d.message.trim() || null, proposed_by: me.id,
+        })));
+        if (error) throw error;
+      }
+      if (toAdd.some((x) => { const p = people.find((y) => y.id === x); return p && !canProjets(p); })) await refreshPeople();
+      toast(drafts.length
+        ? `${initial ? "Projet mis à jour" : "Projet créé"} · ${drafts.length} proposition${drafts.length > 1 ? "s" : ""} envoyée${drafts.length > 1 ? "s" : ""} aux admins`
+        : initial ? "Projet mis à jour" : "Projet créé");
+      bump();
       if (initial) back(); else go({ v: "projet", id: pid }, true);
     } catch (err) {
       setError(errMsg(err));
@@ -704,6 +744,10 @@ function ProjetFormInner({ title, initial, membresInit }: { title: string; initi
       setBusy(false);
     }
   }
+
+  const PROPO_LABEL: Record<Proposition["statut"], [string, string]> = {
+    en_attente: ["En attente d'un admin", "s-proche"], acceptee: ["Acceptée", "s-terminee"], refusee: ["Refusée", "s-retard"],
+  };
 
   return (
     <>
@@ -728,21 +772,80 @@ function ProjetFormInner({ title, initial, membresInit }: { title: string; initi
             <label className="field" style={{ flex: 1 }}><span>Début</span><input className="input" type="date" value={debut} onChange={(e) => setDebut(e.target.value)} /></label>
             <label className="field" style={{ flex: 1 }}><span>Fin visée</span><input className="input" type="date" value={fin} onChange={(e) => setFin(e.target.value)} /></label>
           </div>
+
           <div className="field"><span>Personnes ayant accès <span className="hint">({membres.size})</span></span>
-            <span className="hint">Seules ces personnes voient le projet. Les admins et le créateur du projet le voient toujours.{!me.is_admin && " Seules les personnes ayant l'accès Projets sont proposées."}</span>
+            <span className="hint">Seules ces personnes voient le projet. Les admins et le créateur du projet le voient toujours.</span>
+            {actifs.length > 8 && (
+              <input className="search" type="search" placeholder="Rechercher une personne" value={filtre} onChange={(e) => setFiltre(e.target.value)} />
+            )}
             <div className="stack" style={{ gap: 6 }}>
-              {actifs.map((p) => (
+              {visibles.map((p) => (
                 <label key={p.id} className="check">
                   <input type="checkbox" checked={membres.has(p.id)} onChange={(e) => setMembres((s) => { const n = new Set(s); e.target.checked ? n.add(p.id) : n.delete(p.id); return n; })} />
                   <span>
                     <span className="t">{fullName(p)}</span>
                     {p.fonction && <span className="d"> · {p.fonction}</span>}
-                    {!canProjets(p) && membres.has(p.id) && !membresInit.includes(p.id) && <><br /><span className="d">Le droit « Projets » lui sera donné.</span></>}
+                    {!canProjets(p) && membres.has(p.id) && !membresInit.includes(p.id) && <><br /><span className="d">L'onglet Projets lui sera ouvert, limité à ce projet.</span></>}
                   </span>
                 </label>
               ))}
             </div>
           </div>
+
+          <div className="check-group">
+            <div className="cg-title">Nouvelle personne<span className="d">
+              {me.is_admin
+                ? "En tant qu'admin, créez son compte dans Réglages, Membres, puis cochez-la ci-dessus. Vous pouvez aussi l'enregistrer ici comme proposition."
+                : "Pour une personne qui n'a pas encore de compte : votre proposition sera soumise à un admin, qui l'acceptera ou la refusera."}
+            </span></div>
+
+            {propos.map((x) => (
+              <div key={x.id} className="propo-line">
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="t">{x.prenom} {x.nom}</div>
+                  <div className="d">{x.email}{x.statut === "refusee" && x.motif ? ` · motif : ${x.motif}` : ""}</div>
+                </div>
+                <span className={`badge ${PROPO_LABEL[x.statut][1]}`}>{PROPO_LABEL[x.statut][0]}</span>
+                {x.statut === "en_attente" && x.proposed_by === me.id && (
+                  <button type="button" className="icon-btn" aria-label="Retirer la proposition" onClick={async () => {
+                    const { error } = await supabase.from("projet_propositions").delete().eq("id", x.id);
+                    if (error) toast(errMsg(error)); else { setPropos((l) => l.filter((y) => y.id !== x.id)); toast("Proposition retirée"); }
+                  }}><ITrash width={18} /></button>
+                )}
+              </div>
+            ))}
+            {drafts.map((d, i) => (
+              <div key={d.email} className="propo-line">
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="t">{d.prenom} {d.nom}</div>
+                  <div className="d">{d.email} · envoyée à l'enregistrement</div>
+                </div>
+                <button type="button" className="icon-btn" aria-label="Retirer" onClick={() => setDrafts((l) => l.filter((_, j) => j !== i))}><ITrash width={18} /></button>
+              </div>
+            ))}
+
+            {draft ? (
+              <div className="stack" style={{ gap: 8 }}>
+                <div className="row" style={{ gap: 8 }}>
+                  <input className="input" placeholder="Prénom" value={draft.prenom} onChange={(e) => setDraft({ ...draft, prenom: e.target.value })} />
+                  <input className="input" placeholder="Nom" value={draft.nom} onChange={(e) => setDraft({ ...draft, nom: e.target.value })} />
+                </div>
+                <input className="input" type="email" inputMode="email" placeholder="Email" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} />
+                <input className="input" placeholder="Fonction (facultatif)" value={draft.fonction} onChange={(e) => setDraft({ ...draft, fonction: e.target.value })} />
+                <textarea className="textarea" style={{ minHeight: 70 }} placeholder="Message pour l'admin : rôle de la personne dans le projet (facultatif)" value={draft.message} onChange={(e) => setDraft({ ...draft, message: e.target.value })} />
+                <ErrorBox msg={draftErr} />
+                <div className="row" style={{ gap: 8 }}>
+                  <button type="button" className="btn primary" style={{ flex: 1 }} onClick={addDraft}>Ajouter la proposition</button>
+                  <button type="button" className="btn ghost" onClick={() => { setDraft(null); setDraftErr(null); }}>Annuler</button>
+                </div>
+              </div>
+            ) : (
+              <button type="button" className="btn block" onClick={() => setDraft({ prenom: "", nom: "", email: "", fonction: "", message: "" })}>
+                <IPlus width={18} />Proposer une nouvelle personne
+              </button>
+            )}
+          </div>
+
           <ErrorBox msg={error} />
           <button className="btn primary block" disabled={busy}>{busy ? "Enregistrement…" : initial ? "Enregistrer" : "Créer le projet"}</button>
           <button type="button" className="btn ghost block" onClick={() => back()}>Annuler</button>

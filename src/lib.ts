@@ -407,3 +407,20 @@ export function statsTaches(list: Tache[]) {
     avancement: comptees ? Math.round((terminees / comptees) * 100) : 0,
   };
 }
+
+export interface Proposition {
+  id: string;
+  projet_id: string;
+  prenom: string;
+  nom: string;
+  email: string;
+  fonction: string | null;
+  message: string | null;
+  statut: "en_attente" | "acceptee" | "refusee";
+  proposed_by: string | null;
+  decided_by: string | null;
+  decided_at: string | null;
+  motif: string | null;
+  profile_id: string | null;
+  created_at: string;
+}

@@ -484,3 +484,9 @@ h1, h2, h3, .hello, .brand h1, .detail-head h2, .group-head .name, .reunion-sect
 @media (max-width: 420px) { .tab { font-size: 10.5px; } .tab svg { width: 22px; height: 22px; } }
 .ext-link { color: var(--red); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; word-break: break-all; }
 .theme-desc { padding: 0 16px 12px 44px; font-size: 14px; color: var(--muted); line-height: 1.5; white-space: pre-wrap; }
+.propo-line { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.propo-line .t { font-weight: 600; color: var(--green); }
+.propo-line .d { font-size: 13px; color: var(--muted); word-break: break-word; }
+.tab-ico { position: relative; display: inline-flex; }
+.tab-badge { position: absolute; top: -4px; right: -10px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--red); color: #fff; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.count-pill { min-width: 26px; height: 26px; padding: 0 8px; border-radius: 13px; background: var(--red); color: #fff; font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; }
