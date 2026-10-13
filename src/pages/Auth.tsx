@@ -7,7 +7,7 @@ function Brand({ subtitle }: { subtitle: string }) {
     <div className="auth-hero">
       <div className="logo-card"><Logo /></div>
       <div className="kicker">Groupe Scolaire Carlo Acutis</div>
-      <h1>Suivi des actions du conseil</h1>
+      <h1>GSCA</h1>
       <p>{subtitle}</p>
     </div>
   );

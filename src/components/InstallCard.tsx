@@ -3,7 +3,7 @@ import QRCode from "qrcode";
 import { canPromptInstall, detectDevice, onInstallChange, promptInstall } from "../install";
 import { useApp } from "../store";
 
-const APP_NAME = "CA GSCA";
+const APP_NAME = "GSCA";
 
 // Pictogrammes reprenant les boutons des navigateurs, pour que la personne les reconnaisse
 const ShareIOS = () => (

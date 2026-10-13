@@ -1,6 +1,6 @@
 {
-  "name": "CA GSCA",
-  "short_name": "CA GSCA",
+  "name": "GSCA",
+  "short_name": "GSCA",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#F3ECDF",
@@ -26,6 +26,6 @@
   ],
   "id": "./",
   "scope": "./",
-  "description": "Suivi des réunions et des actions du conseil scolaire et du conseil d'administration du Groupe Scolaire Carlo Acutis",
+  "description": "Application de gestion du Groupe Scolaire Carlo Acutis : conseils, actions, associations et projets",
   "orientation": "portrait"
 }
