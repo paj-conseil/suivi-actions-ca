@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
         id: data.user.id, email, prenom, nom, fonction,
         is_admin: !!body.is_admin, is_bureau: !!body.is_bureau, is_ca: !!body.is_ca, is_associations: !!body.is_associations,
         assoc_modification: !!body.assoc_modification, assoc_suppression: !!body.assoc_suppression,
-        is_projets: !!body.is_projets,
+        is_projets: !!body.is_projets, projet_creation: !!body.projet_creation,
         must_change_password: true, actif: true,
       });
       if (pErr) {
@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
         return json({ error: "Vous ne pouvez pas retirer vos propres droits d'administrateur" }, 400);
       }
       const patch: Record<string, unknown> = {};
-      for (const k of ["prenom", "nom", "fonction", "is_admin", "is_bureau", "is_ca", "is_associations", "assoc_modification", "assoc_suppression", "is_projets", "actif"]) {
+      for (const k of ["prenom", "nom", "fonction", "is_admin", "is_bureau", "is_ca", "is_associations", "assoc_modification", "assoc_suppression", "is_projets", "projet_creation", "actif"]) {
         if (k in body) patch[k] = typeof body[k] === "string" ? ((body[k] as string).trim() || (k === "fonction" ? null : "")) : body[k];
       }
       if (body.email) {

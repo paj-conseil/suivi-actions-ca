@@ -11,8 +11,8 @@ function Roles({ p }: { p: Profile }) {
       {p.is_bureau && <span className="badge instance-bureau">Conseil scolaire</span>}
       {p.is_ca && <span className="badge instance-ca">CA</span>}
       {assocNiveau(p) && <span className="badge role">{assocNiveau(p)}</span>}
-      {p.is_projets && !p.is_admin && <span className="badge role">Projets</span>}
-      {!p.is_admin && !p.is_bureau && !p.is_ca && !canAssociations(p) && !p.is_projets && <span className="badge">Aucun accès</span>}
+      {(p.is_projets || p.projet_creation) && !p.is_admin && <span className="badge role">{p.projet_creation ? "Projets : création" : "Projets"}</span>}
+      {!p.is_admin && !p.is_bureau && !p.is_ca && !canAssociations(p) && !p.is_projets && !p.projet_creation && <span className="badge">Aucun accès</span>}
       {!p.actif && <span className="badge s-retard">Désactivé</span>}
       {p.actif && p.must_change_password && <span className="badge s-proche">1re connexion à faire</span>}
     </span>
@@ -55,6 +55,7 @@ export function UsersPage() {
             <li><strong>Conseil d'administration</strong> : consulte la section CA des réunions et ses actions.</li>
             <li><strong>Associations</strong> : trois niveaux cumulables, Lecture, Modification et Suppression des documents administratifs des deux associations.</li>
             <li><strong>Projets</strong> : accès aux seuls projets dont la personne est membre. Peut être le seul accès d'un compte.</li>
+            <li><strong>Création de projets</strong> : permet de créer des projets. Le créateur gère ensuite son projet (informations, membres, suppression).</li>
           </ul>
           <p className="muted tiny" style={{ marginBottom: 0 }}>Chaque responsable peut mettre à jour le statut et l'avancement de ses propres actions.</p>
         </div>
@@ -87,7 +88,8 @@ function UserSheet({ user, onClose, onSaved, onCreds }: {
   const [aSuppr, setASuppr] = useState(user?.assoc_suppression ?? false);
   const assocRights = { is_associations: aLect || aModif || aSuppr, assoc_modification: aModif, assoc_suppression: aSuppr };
   const [actif, setActif] = useState(user?.actif ?? true);
-  const [isProjets, setIsProjets] = useState(user?.is_projets ?? false);
+  const [isProjets, setIsProjets] = useState(user ? user.is_projets || user.projet_creation : false);
+  const [projCreation, setProjCreation] = useState(user?.projet_creation ?? false);
   const [projets, setProjets] = useState<Projet[]>([]);
   const [mesProjetsInit, setMesProjetsInit] = useState<Set<string>>(new Set());
   const [mesProjets, setMesProjets] = useState<Set<string>>(new Set());
@@ -125,7 +127,7 @@ function UserSheet({ user, onClose, onSaved, onCreds }: {
     try {
       if (!user) {
         const res = await adminUsers<{ id: string; password: string }>({
-          action: "create", prenom, nom, email, fonction, is_admin: isAdmin, is_bureau: isBureau, is_ca: isCa, ...assocRights, is_projets: isProjets,
+          action: "create", prenom, nom, email, fonction, is_admin: isAdmin, is_bureau: isBureau, is_ca: isCa, ...assocRights, is_projets: isProjets, projet_creation: isProjets && projCreation,
         });
         if (isProjets) await saveProjets(res.id);
         await refreshPeople();
@@ -134,7 +136,7 @@ function UserSheet({ user, onClose, onSaved, onCreds }: {
         await adminUsers({
           action: "update", id: user.id, prenom, nom, fonction,
           email: email.trim().toLowerCase() !== user.email ? email : undefined,
-          is_admin: isAdmin, is_bureau: isBureau, is_ca: isCa, ...assocRights, is_projets: isProjets, actif,
+          is_admin: isAdmin, is_bureau: isBureau, is_ca: isCa, ...assocRights, is_projets: isProjets, projet_creation: isProjets && projCreation, actif,
         });
         await saveProjets(user.id);
         if (self) await refreshMe();
@@ -191,8 +193,11 @@ function UserSheet({ user, onClose, onSaved, onCreds }: {
             <div className="check-group">
               <div className="cg-title">Section Projets<span className="d">Chaque personne ne voit que les projets cochés{isAdmin ? " · Admin : voit tous les projets" : ""}</span></div>
               <label className="check"><input type="checkbox" checked={isAdmin || isProjets} disabled={isAdmin}
-                onChange={(e) => { setIsProjets(e.target.checked); if (!e.target.checked) setMesProjets(new Set()); }} />
+                onChange={(e) => { setIsProjets(e.target.checked); if (!e.target.checked) { setMesProjets(new Set()); setProjCreation(false); } }} />
                 <span><span className="t">Accès aux projets</span><br /><span className="d">Ouvre l'onglet Projets</span></span></label>
+              <label className="check"><input type="checkbox" checked={isAdmin || projCreation} disabled={isAdmin}
+                onChange={(e) => { setProjCreation(e.target.checked); if (e.target.checked) setIsProjets(true); }} />
+                <span><span className="t">Création de projets</span><br /><span className="d">Peut créer des projets et gérer ceux qu'il a créés</span></span></label>
               {(isProjets || isAdmin) && (projets.length === 0
                 ? <div className="tiny muted">Aucun projet créé pour l'instant.</div>
                 : projets.map((pj) => (

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import {
   supabase, type Commentaire, type Profile, type Projet, type ProjetMembre, type ProjetStatut, type Statut, type Tache, type Theme,
-  PROJET_STATUTS, STATUTS, adminUsers, canProjets, echeanceText, errMsg, fmtDate, fmtDateTime, fullName, isClosed, projetStatut,
+  PROJET_STATUTS, STATUTS, adminUsers, canCreerProjet, canProjets, isGestionnaire, echeanceText, errMsg, fmtDate, fmtDateTime, fullName, isClosed, projetStatut,
   sante, statsTaches,
 } from "../lib";
 import { useApp, useQuery } from "../store";
@@ -99,7 +99,7 @@ export function ProjetsList() {
       <main className="content">
         <ErrorBox msg={q.error} />
         {q.loading && !q.data ? <Spinner /> : projets.length === 0 ? (
-          <Empty icon={<IFolder />}>{me.is_admin ? "Aucun projet pour l'instant. Créez le premier avec le bouton « Projet »." : "Vous ne participez à aucun projet pour l'instant."}</Empty>
+          <Empty icon={<IFolder />}>{canCreerProjet(me) ? "Aucun projet pour l'instant. Créez le premier avec le bouton « Projet »." : "Vous ne participez à aucun projet pour l'instant."}</Empty>
         ) : (
           <>
             {mesOuvertes.length > 0 && (
@@ -113,7 +113,7 @@ export function ProjetsList() {
           </>
         )}
       </main>
-      {me.is_admin && <button className="fab" onClick={() => go({ v: "projet-form" })}><IPlus />Projet</button>}
+      {canCreerProjet(me) && <button className="fab" onClick={() => go({ v: "projet-form" })}><IPlus />Projet</button>}
     </>
   );
 }
@@ -230,7 +230,7 @@ export function ProjetDetail({ id }: { id: string }) {
 
   return (
     <>
-      <Topbar title="Projet" backTo right={me.is_admin && (
+      <Topbar title="Projet" backTo right={isGestionnaire(me, p) && (
         <button className="icon-btn" aria-label="Modifier le projet" onClick={() => go({ v: "projet-form", id: p.id })}><IEdit /></button>
       )} />
       <main className="content">
@@ -262,6 +262,9 @@ export function ProjetDetail({ id }: { id: string }) {
           <div className="row" style={{ marginTop: 12, gap: 8 }}>
             <span className="small muted">{membresP.length} membre{membresP.length > 1 ? "s" : ""}</span>
             <AvatarStack people={membresP} />
+            {p.created_by && peopleById.get(p.created_by) && (
+              <span className="tiny muted" style={{ marginLeft: "auto" }}>Créé par {fullName(peopleById.get(p.created_by))}</span>
+            )}
           </div>
         </section>
 
@@ -642,8 +645,9 @@ export function ProjetForm({ id }: { id?: string }) {
     return { p: p.data as Projet | null, membres: (m.data ?? []) as ProjetMembre[] };
   }, [id]);
   const title = id ? "Modifier le projet" : "Nouveau projet";
-  if (!me.is_admin) return (<><Topbar title={title} backTo /><main className="content"><Empty>Réservé aux admins.</Empty></main></>);
   if (q.loading && !q.data) return (<><Topbar title={title} backTo /><Spinner /></>);
+  const allowed = id ? isGestionnaire(me, q.data?.p) : canCreerProjet(me);
+  if (!allowed) return (<><Topbar title={title} backTo /><main className="content"><Empty>{id ? "Seuls le créateur du projet et les admins peuvent le modifier." : "Vous n'avez pas le droit de créer un projet."}</Empty></main></>);
   return <ProjetFormInner key={id ?? "new"} title={title} initial={q.data?.p ?? null} membresInit={(q.data?.membres ?? []).map((m) => m.profile_id)} />;
 }
 
@@ -657,7 +661,8 @@ function ProjetFormInner({ title, initial, membresInit }: { title: string; initi
   const [membres, setMembres] = useState<Set<string>>(new Set(initial ? membresInit : [me.id]));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const actifs = people.filter((p) => p.actif);
+  // Un admin peut ajouter n'importe qui (le droit Projets est alors donné) ; un créateur choisit parmi les personnes qui ont déjà ce droit
+  const actifs = people.filter((p) => p.actif && (me.is_admin || canProjets(p) || membresInit.includes(p.id)));
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -688,7 +693,7 @@ function ProjetFormInner({ title, initial, membresInit }: { title: string; initi
         if (error) throw error;
       }
       // Donner le droit Projets aux membres qui ne l'ont pas encore
-      const sansDroit = toAdd.map((x) => people.find((p) => p.id === x)).filter((p) => p && !canProjets(p)) as Profile[];
+      const sansDroit = me.is_admin ? toAdd.map((x) => people.find((p) => p.id === x)).filter((p) => p && !canProjets(p)) as Profile[] : [];
       for (const p of sansDroit) await adminUsers({ action: "update", id: p.id, is_projets: true });
       if (sansDroit.length) await refreshPeople();
       toast(initial ? "Projet mis à jour" : "Projet créé"); bump();
@@ -724,7 +729,7 @@ function ProjetFormInner({ title, initial, membresInit }: { title: string; initi
             <label className="field" style={{ flex: 1 }}><span>Fin visée</span><input className="input" type="date" value={fin} onChange={(e) => setFin(e.target.value)} /></label>
           </div>
           <div className="field"><span>Personnes ayant accès <span className="hint">({membres.size})</span></span>
-            <span className="hint">Seules ces personnes voient le projet. Les admins le voient toujours.</span>
+            <span className="hint">Seules ces personnes voient le projet. Les admins et le créateur du projet le voient toujours.{!me.is_admin && " Seules les personnes ayant l'accès Projets sont proposées."}</span>
             <div className="stack" style={{ gap: 6 }}>
               {actifs.map((p) => (
                 <label key={p.id} className="check">

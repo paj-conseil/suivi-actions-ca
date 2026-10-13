@@ -27,6 +27,7 @@ export interface Profile {
   assoc_modification: boolean;
   assoc_suppression: boolean;
   is_projets: boolean;
+  projet_creation: boolean;
   must_change_password: boolean;
   actif: boolean;
 }
@@ -362,6 +363,7 @@ export interface Projet {
   statut: ProjetStatut;
   date_debut: string | null;
   date_fin: string | null;
+  created_by: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -384,7 +386,11 @@ export interface Tache {
 }
 export interface Commentaire { id: string; tache_id: string; auteur_id: string | null; texte: string; created_at: string }
 
-export const canProjets = (p: Pick<Profile, "is_admin" | "is_projets">) => p.is_admin || p.is_projets;
+export const canProjets = (p: Pick<Profile, "is_admin" | "is_projets" | "projet_creation">) => p.is_admin || p.is_projets || p.projet_creation;
+export const canCreerProjet = (p: Pick<Profile, "is_admin" | "projet_creation">) => p.is_admin || p.projet_creation;
+/** Admin, ou créateur du projet */
+export const isGestionnaire = (p: Pick<Profile, "id" | "is_admin">, projet: Pick<Projet, "created_by"> | null | undefined) =>
+  p.is_admin || (!!projet && projet.created_by === p.id);
 
 /** Indicateurs d'un ensemble de tâches et sous-tâches */
 export function statsTaches(list: Tache[]) {

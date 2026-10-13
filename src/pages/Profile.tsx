@@ -31,6 +31,7 @@ export function ProfilePage() {
           {me.is_bureau && <span className="badge instance-bureau">Conseil scolaire</span>}
           {me.is_ca && <span className="badge instance-ca">Conseil d'administration</span>}
           {assocNiveau(me) && <span className="badge role">{assocNiveau(me)}</span>}
+          {!me.is_admin && (me.is_projets || me.projet_creation) && <span className="badge role">{me.projet_creation ? "Projets : création" : "Projets"}</span>}
         </div>
 
         {me.is_admin && (
